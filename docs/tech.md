@@ -5,6 +5,11 @@
 
 ## Запуск
 
+**Опубликованная версия:** https://023irene.github.io/cart-rush/ — раздаётся GitHub Pages из
+ветки `main`, обновляется автоматически при каждом push.
+
+**Локально:**
+
 ```
 VS Code → правый клик по index.html → Open with Live Server
 ```
