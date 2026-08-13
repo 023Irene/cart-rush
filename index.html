@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Cart Rush</title>
+<style>
+  /* Страница только держит канву — вся отрисовка внутри Phaser */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #2b2b2b;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+    font-family: "Segoe UI", system-ui, sans-serif;
+  }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+
+<!-- Phaser 4.2.1, версия закреплена точным номером (ADR-0001) -->
+<script src="https://cdn.jsdelivr.net/npm/phaser@4.2.1/dist/phaser.min.js"></script>
+
+<script>
+"use strict";
+
+/* ============================================================================
+   CONFIG — все игровые числа проекта.
+   Баланс крутится ТОЛЬКО здесь, логику для этого трогать не нужно.
+   Источник чисел: GAME_SPEC.md, раздел 5.
+   ========================================================================= */
+const CONFIG = {
+  // Отладка: true рисует тела Matter поверх графики
+  debug: false,
+
+  // Логический размер экрана
+  screen: { width: 960, height: 540 },
+
+  // Палитра «дневной цех» (GAME_SPEC.md, раздел 12)
+  colors: {
+    bg:       0xf4efe4,
+    rail:     0x8d99a6,
+    metal:    0x6f7b88,
+    yellow:   0xf4b400,
+    blue:     0x2f6fd0,
+    danger:   0xd64545,
+    booster:  0x3f9e5a,
+    text:     '#2b2b2b',
+    textDim:  '#6f7b88'
+  },
+
+  // Рельсы: Y-координаты центра тележки на каждой рельсе
+  lanes: [200, 380],
+
+  // Тележка
+  cart: {
+    x: 480,            // по горизонтали тележка не двигается
+    width: 220,        // внешняя ширина кузова
+    floorThickness: 12,
+    wallHeight: 28,    // высота бортов, растёт от улучшения в магазине
+    wallThickness: 12,
+    dividerThickness: 8,
+    switchDuration: 150,   // мс на смену рельсы
+    cargoImpulse: 2.2      // боковой толчок грузу при манёвре (px за шаг)
+  },
+
+  // Коробки: размер -> габарит, ценность, штраф, доля в спавне
+  boxes: {
+    small:  { size: 32, value: 10, penalty: 30,  weight: 50 },
+    medium: { size: 48, value: 25, penalty: 80,  weight: 35 },
+    large:  { size: 64, value: 50, penalty: 150, weight: 15 }
+  },
+
+  // Штраф за коробку, принятую чужой секцией, — множитель к обычному штрафу.
+  // Больше единицы намеренно: иначе «уехать и принять промах» не было бы решением.
+  wrongSectionMultiplier: 1.5,
+
+  // Падение и темп (GAME_SPEC.md, раздел 5.3)
+  fall: {
+    speedStart: 180,      // px/с
+    speedMax: 500,
+    intervalStart: 1400,  // мс между коробками
+    intervalMin: 350,
+    rampEvery: 20000,     // мс между ступенями роста
+    speedStep: 1.08,      // +8 %
+    intervalStep: 0.95    // −5 %
+  },
+
+  // XP (используется с этапа 2)
+  xp: { start: 500 },
+
+  // Физика груза
+  physics: {
+    gravityY: 1,
+    boxFriction: 0.35,
+    boxFrictionAir: 0.01,
+    boxRestitution: 0.05,
+    boxDensity: 0.002
+  },
+
+  // Границы, за которыми объект считается потерянным
+  bounds: {
+    groundY: 500,        // ниже этой линии падающая коробка засчитана как промах
+    cargoDropX: 130,     // отклонение груза от центра тележки, после которого он за бортом
+    cargoDropY: 70       // насколько груз может провалиться ниже центра тележки
+  }
+};
+
+// Производные величины: границы секций и зоны спавна
+CONFIG.derived = {
+  get innerHalfWidth() {
+    return CONFIG.cart.width / 2 - CONFIG.cart.wallThickness / 2;
+  }
+};
+
+/* ============================================================================
+   SaveManager — работа с localStorage (рекорд, валюта, апгрейды, громкость)
+   ========================================================================= */
+const SaveManager = {
+  KEY: 'cartRushSave',
+  defaults: {
+    bestScore: 0,
+    currency: 0,
+    upgrades: { walls: 0, battery: 0, suspension: 0 },
+    volume: 0.6
+  },
+
+  load() {
+    try {
+      const raw = localStorage.getItem(this.KEY);
+      if (!raw) return { ...this.defaults };
+      return { ...this.defaults, ...JSON.parse(raw) };
+    } catch (e) {
+      // Повреждённое сохранение не должно ронять игру
+      return { ...this.defaults };
+    }
+  },
+
+  save(data) {
+    try {
+      localStorage.setItem(this.KEY, JSON.stringify(data));
+    } catch (e) {
+      // Приватный режим браузера — просто играем без сохранений
+    }
+  }
+};
+
+/* ============================================================================
+   Вспомогательное: рисование текстур примитивами.
+   Спрайтов в проекте нет — всё генерируется кодом при загрузке.
+   ========================================================================= */
+function makeBoxTexture(scene, key, sizePx, colorHex) {
+  const g = scene.make.graphics({ add: false });
+
+  // Тело коробки
+  g.fillStyle(colorHex, 1);
+  g.fillRoundedRect(0, 0, sizePx, sizePx, 4);
+
+  // Тёмная окантовка для читаемости на светлом фоне
+  g.lineStyle(2, 0x000000, 0.18);
+  g.strokeRoundedRect(1, 1, sizePx - 2, sizePx - 2, 4);
+
+  // Полоска-маркировка: делает коробку узнаваемой и показывает поворот тела
+  g.fillStyle(0xffffff, 0.35);
+  g.fillRect(sizePx * 0.18, sizePx * 0.42, sizePx * 0.64, sizePx * 0.16);
+
+  g.generateTexture(key, sizePx, sizePx);
+  g.destroy();
+}
+
+/* ============================================================================
+   BootScene — генерирует текстуры и уходит в меню
+   ========================================================================= */
+class BootScene extends Phaser.Scene {
+  constructor() { super('BootScene'); }
+
+  create() {
+    // Текстуры коробок: 3 размера × 2 цвета
+    for (const [sizeName, spec] of Object.entries(CONFIG.boxes)) {
+      makeBoxTexture(this, `box-${sizeName}-yellow`, spec.size, CONFIG.colors.yellow);
+      makeBoxTexture(this, `box-${sizeName}-blue`, spec.size, CONFIG.colors.blue);
+    }
+    this.scene.start('MenuScene');
+  }
+}
+
+/* ============================================================================
+   MenuScene — главное меню
+   ========================================================================= */
+class MenuScene extends Phaser.Scene {
+  constructor() { super('MenuScene'); }
+
+  create() {
+    const { width, height } = CONFIG.screen;
+    this.cameras.main.setBackgroundColor(CONFIG.colors.bg);
+
+    this.add.text(width / 2, height / 2 - 110, 'CART RUSH', {
+      fontFamily: 'Segoe UI, sans-serif', fontSize: '72px',
+      fontStyle: 'bold', color: CONFIG.colors.text
+    }).setOrigin(0.5);
+
+    this.add.text(width / 2, height / 2 - 40,
+      'Жёлтые коробки — в переднюю секцию, синие — в заднюю', {
+      fontFamily: 'Segoe UI, sans-serif', fontSize: '20px', color: CONFIG.colors.textDim
+    }).setOrigin(0.5);
+
+    const save = SaveManager.load();
+    this.add.text(width / 2, height / 2 - 8, `Рекорд: ${save.bestScore}`, {
+      fontFamily: 'Segoe UI, sans-serif', fontSize: '20px', color: CONFIG.colors.textDim
+    }).setOrigin(0.5);
+
+    this.makeButton(width / 2, height / 2 + 60, 'ИГРАТЬ', () => {
+      this.scene.start('GameScene');
+    });
+
+    this.add.text(width / 2, height - 40,
+      '↑ ↓ — сменить рельсу  ·  Пробел — сдать груз  ·  Esc — пауза', {
+      fontFamily: 'Segoe UI, sans-serif', fontSize: '16px', color: CONFIG.colors.textDim
+    }).setOrigin(0.5);
+
+    // Запуск игры с клавиатуры, чтобы не тянуться к мыши
+    this.input.keyboard.once('keydown-SPACE', () => this.scene.start('GameScene'));
+    this.input.keyboard.once('keydown-ENTER', () => this.scene.start('GameScene'));
+  }
+
+  // Кнопка из прямоугольника и текста — отдельных ассетов не нужно
+  makeButton(x, y, label, onClick) {
+    const w = 240, h = 60;
+    const box = this.add.rectangle(x, y, w, h, CONFIG.colors.blue)
+      .setInteractive({ useHandCursor: true });
+    const text = this.add.text(x, y, label, {
+      fontFamily: 'Segoe UI, sans-serif', fontSize: '26px',
+      fontStyle: 'bold', color: '#ffffff'
+    }).setOrigin(0.5);
+
+    box.on('pointerover', () => box.setFillStyle(CONFIG.colors.yellow));
+    box.on('pointerout', () => box.setFillStyle(CONFIG.colors.blue));
+    box.on('pointerdown', onClick);
+    return { box, text };
+  }
+}
+
+/* ============================================================================
+   GameScene — сам забег
+   ========================================================================= */
+class GameScene extends Phaser.Scene {
+  constructor() { super('GameScene'); }
+
+  create() {
+    this.cameras.main.setBackgroundColor(CONFIG.colors.bg);
+
+    // --- состояние забега ---
+    this.run = {
+      xp: CONFIG.xp.start,
+      maxXp: CONFIG.xp.start,
+      score: 0,
+      elapsed: 0,
+      fallSpeed: CONFIG.fall.speedStart,
+      spawnInterval: CONFIG.fall.intervalStart,
+      lastRamp: 0
+    };
+
+    this.fallingBoxes = [];   // коробки в воздухе
+    this.cargo = [];          // коробки в кузове
+    this.switching = false;
+
+    this.drawBackground();
+    this.createCart();
+    this.createInput();
+    this.createDebugReadout();
+
+    // Спавн коробок по таймеру; интервал пересоздаётся при росте темпа
+    this.spawnTimer = this.time.addEvent({
+      delay: this.run.spawnInterval,
+      loop: true,
+      callback: () => this.spawnBox()
+    });
+
+    // Ловля: коробка становится грузом при первом касании тележки
+    this.matter.world.on('collisionstart', this.onCollisionStart, this);
+  }
+
+  /* ---------- фон: рельсы и пол цеха ---------- */
+  drawBackground() {
+    const { width } = CONFIG.screen;
+    const g = this.add.graphics();
+
+    // Две рельсы — по одной под каждой позицией тележки
+    CONFIG.lanes.forEach(laneY => {
+      const railY = laneY + CONFIG.cart.floorThickness / 2 + 26;
+      g.fillStyle(CONFIG.colors.rail, 1);
+      g.fillRect(0, railY, width, 6);
+      // Шпалы
+      g.fillStyle(CONFIG.colors.metal, 0.35);
+      for (let x = 20; x < width; x += 60) g.fillRect(x, railY + 6, 26, 10);
+    });
+
+    // Линия пола: ниже неё коробка считается упавшей
+    g.fillStyle(CONFIG.colors.metal, 0.25);
+    g.fillRect(0, CONFIG.bounds.groundY, width, 4);
+
+    g.setDepth(-10);
+  }
+
+  /* ---------- тележка: составное статичное тело + своя отрисовка ---------- */
+  createCart() {
+    const c = CONFIG.cart;
+    const laneY = CONFIG.lanes[0];
+
+    this.cartLane = 0;
+
+    const floorY = laneY + 26;
+    const wallY = floorY - c.floorThickness / 2 - c.wallHeight / 2;
+
+    // Части кузова: дно, задний борт, передний борт, перегородка
+    const floor = this.matter.bodies.rectangle(c.x, floorY, c.width, c.floorThickness);
+    const backWall = this.matter.bodies.rectangle(
+      c.x - c.width / 2 + c.wallThickness / 2, wallY, c.wallThickness, c.wallHeight);
+    const frontWall = this.matter.bodies.rectangle(
+      c.x + c.width / 2 - c.wallThickness / 2, wallY, c.wallThickness, c.wallHeight);
+    const divider = this.matter.bodies.rectangle(
+      c.x, wallY, c.dividerThickness, c.wallHeight);
+
+    this.cartBody = this.matter.body.create({
+      parts: [floor, backWall, frontWall, divider],
+      isStatic: true,
+      friction: 0.6,
+      label: 'cart'
+    });
+    this.matter.world.add(this.cartBody);
+
+    // Графика тележки перерисовывается каждый кадр по позиции тела
+    this.cartGraphics = this.add.graphics().setDepth(5);
+    this.drawCart();
+  }
+
+  drawCart() {
+    const c = CONFIG.cart;
+    const g = this.cartGraphics;
+    const cx = this.cartBody.position.x;
+    const cy = this.cartBody.position.y;
+
+    const floorY = cy + 26;
+    const wallTop = floorY - c.floorThickness / 2 - c.wallHeight;
+    const halfW = c.width / 2;
+
+    g.clear();
+
+    // Тень под тележкой
+    g.fillStyle(0x000000, 0.10);
+    g.fillEllipse(cx, floorY + 16, c.width * 0.9, 14);
+
+    // Дно
+    g.fillStyle(CONFIG.colors.metal, 1);
+    g.fillRoundedRect(cx - halfW, floorY - c.floorThickness / 2, c.width, c.floorThickness, 3);
+
+    // Задняя секция — синяя, передняя — жёлтая (цвет секции = цвет её коробок)
+    g.fillStyle(CONFIG.colors.blue, 1);
+    g.fillRect(cx - halfW, wallTop, c.wallThickness, c.wallHeight);
+    g.fillStyle(CONFIG.colors.yellow, 1);
+    g.fillRect(cx + halfW - c.wallThickness, wallTop, c.wallThickness, c.wallHeight);
+
+    // Перегородка между секциями
+    g.fillStyle(CONFIG.colors.metal, 1);
+    g.fillRect(cx - c.dividerThickness / 2, wallTop, c.dividerThickness, c.wallHeight);
+
+    // Подсветка пола секций: сразу видно, куда какая коробка должна лечь
+    g.fillStyle(CONFIG.colors.blue, 0.18);
+    g.fillRect(cx - halfW + c.wallThickness, floorY - c.floorThickness / 2 - 3,
+               halfW - c.wallThickness - c.dividerThickness / 2, 3);
+    g.fillStyle(CONFIG.colors.yellow, 0.18);
+    g.fillRect(cx + c.dividerThickness / 2, floorY - c.floorThickness / 2 - 3,
+               halfW - c.wallThickness - c.dividerThickness / 2, 3);
+
+    // Колёса
+    g.fillStyle(0x3b444d, 1);
+    g.fillCircle(cx - halfW * 0.55, floorY + 12, 9);
+    g.fillCircle(cx + halfW * 0.55, floorY + 12, 9);
+  }
+
+  /* ---------- ввод ---------- */
+  createInput() {
+    const kb = this.input.keyboard;
+
+    kb.on('keydown-UP', () => this.switchLane(-1));
+    kb.on('keydown-W', () => this.switchLane(-1));
+    kb.on('keydown-DOWN', () => this.switchLane(1));
+    kb.on('keydown-S', () => this.switchLane(1));
+
+    // Сдача груза появится на этапе 2; сейчас пробел просто чистит кузов,
+    // чтобы можно было проверить физику накопления
+    kb.on('keydown-SPACE', () => this.unloadCargo());
+
+    kb.on('keydown-ESC', () => this.pauseGame());
+    kb.on('keydown-P', () => this.pauseGame());
+  }
+
+  /* ---------- смена рельсы ---------- */
+  switchLane(direction) {
+    if (this.switching) return;
+
+    const nextLane = Phaser.Math.Clamp(this.cartLane + direction, 0, CONFIG.lanes.length - 1);
+    if (nextLane === this.cartLane) return;
+
+    this.cartLane = nextLane;
+    this.switching = true;
+
+    // Груз получает боковой толчок: это и есть риск накопления
+    const impulse = CONFIG.cart.cargoImpulse;
+    this.cargo.forEach(box => {
+      this.matter.body.setVelocity(box.body, {
+        x: Phaser.Math.FloatBetween(-impulse, impulse),
+        y: box.body.velocity.y - impulse * 0.4
+      });
+      this.matter.body.setAngularVelocity(box.body, Phaser.Math.FloatBetween(-0.08, 0.08));
+    });
+
+    // Тележка едет твином, груз переносится тем же смещением по Y
+    const tweenState = { y: this.cartBody.position.y };
+    const targetY = CONFIG.lanes[nextLane];
+
+    this.tweens.add({
+      targets: tweenState,
+      y: targetY,
+      duration: CONFIG.cart.switchDuration,
+      ease: 'Quad.easeOut',
+      onUpdate: () => {
+        const dy = tweenState.y - this.cartBody.position.y;
+        this.moveCartBy(dy);
+      },
+      onComplete: () => { this.switching = false; }
+    });
+  }
+
+  // Двигает тележку и весь груз на одно и то же смещение
+  moveCartBy(dy) {
+    if (dy === 0) return;
+    this.matter.body.setPosition(this.cartBody, {
+      x: this.cartBody.position.x,
+      y: this.cartBody.position.y + dy
+    });
+    this.cargo.forEach(box => {
+      this.matter.body.translate(box.body, { x: 0, y: dy });
+    });
+  }
+
+  /* ---------- спавн коробок ---------- */
+  spawnBox() {
+    const sizeName = this.pickSize();
+    const spec = CONFIG.boxes[sizeName];
+    const color = Math.random() < 0.5 ? 'yellow' : 'blue';
+
+    // Коробка всегда падает в пределах кузова: выбирается только половина,
+    // а совпадёт ли она с цветом — то, ради чего игрок принимает решение
+    const targetSection = Math.random() < 0.5 ? 'front' : 'back';
+    const offset = Phaser.Math.Between(25, 90);
+    const x = CONFIG.cart.x + (targetSection === 'front' ? offset : -offset);
+
+    const box = this.matter.add.image(x, -spec.size, `box-${sizeName}-${color}`, null, {
+      friction: CONFIG.physics.boxFriction,
+      frictionAir: CONFIG.physics.boxFrictionAir,
+      restitution: CONFIG.physics.boxRestitution,
+      density: CONFIG.physics.boxDensity
+    });
+
+    box.setDepth(4);
+    box.boxData = {
+      sizeName,
+      color,
+      value: spec.value,
+      penalty: spec.penalty,
+      state: 'falling',
+      section: null
+    };
+
+    // В полёте гравитации нет: скорость держится ровно такой, как в спеке,
+    // и переназначается каждый кадр (иначе frictionAir погасит её на лету)
+    box.setIgnoreGravity(true);
+    box.setVelocity(0, this.run.fallSpeed / 60);
+
+    this.fallingBoxes.push(box);
+  }
+
+  // Выбор размера по весам из CONFIG
+  pickSize() {
+    const entries = Object.entries(CONFIG.boxes);
+    const total = entries.reduce((sum, [, spec]) => sum + spec.weight, 0);
+    let roll = Math.random() * total;
+    for (const [name, spec] of entries) {
+      roll -= spec.weight;
+      if (roll <= 0) return name;
+    }
+    return entries[0][0];
+  }
+
+  /* ---------- ловля ---------- */
+  onCollisionStart(event) {
+    event.pairs.forEach(pair => {
+      const box = this.resolveFallingBox(pair.bodyA) || this.resolveFallingBox(pair.bodyB);
+      if (!box) return;
+
+      const other = this.resolveFallingBox(pair.bodyA) ? pair.bodyB : pair.bodyA;
+
+      // Коробка принимается и когда легла на тележку, и когда легла на уже
+      // накопленный груз — иначе верхние коробки продавливали бы штабель
+      if (this.isCartPart(other) || this.isCargoBody(other)) {
+        this.acceptBox(box);
+      }
+    });
+  }
+
+  // Тело принадлежит тележке, если это она сама или одна из её частей
+  isCartPart(body) {
+    return body === this.cartBody || body.parent === this.cartBody;
+  }
+
+  isCargoBody(body) {
+    const go = body.gameObject;
+    return !!(go && go.boxData && go.boxData.state === 'cargo');
+  }
+
+  resolveFallingBox(body) {
+    const go = body.gameObject;
+    if (go && go.boxData && go.boxData.state === 'falling') return go;
+    return null;
+  }
+
+  acceptBox(box) {
+    const data = box.boxData;
+
+    // Секция определяется по точке первого касания и больше не пересчитывается
+    data.section = box.x > this.cartBody.position.x ? 'front' : 'back';
+    data.state = 'cargo';
+
+    const expected = data.color === 'yellow' ? 'front' : 'back';
+    data.correct = (data.section === expected);
+
+    // В кузове коробка живёт обычной физикой
+    box.setIgnoreGravity(false);
+
+    this.fallingBoxes = this.fallingBoxes.filter(b => b !== box);
+
+    if (data.correct) {
+      this.cargo.push(box);
+    } else {
+      // Чужая секция — ошибка. Штраф и подсчёт появятся на этапе 2
+      this.flashError();
+      box.destroy();
+    }
+  }
+
+  /* ---------- сдача груза (полностью появится на этапе 2) ---------- */
+  unloadCargo() {
+    if (this.cargo.length === 0) return;
+    this.cargo.forEach(box => box.destroy());
+    this.cargo = [];
+  }
+
+  /* ---------- обратная связь ---------- */
+  flashError() {
+    this.cameras.main.shake(120, 0.006);
+  }
+
+  /* ---------- цикл ---------- */
+  update(time, delta) {
+    this.run.elapsed += delta;
+
+    this.rampDifficulty();
+    this.holdFallSpeed();
+    this.checkMissedBoxes();
+    this.checkCargoOverboard();
+    this.drawCart();
+    this.updateDebugReadout();
+  }
+
+  // Плавный рост темпа без конца (GAME_SPEC.md, раздел 5.3)
+  rampDifficulty() {
+    if (this.run.elapsed - this.run.lastRamp < CONFIG.fall.rampEvery) return;
+    this.run.lastRamp = this.run.elapsed;
+
+    this.run.fallSpeed = Math.min(
+      CONFIG.fall.speedMax, this.run.fallSpeed * CONFIG.fall.speedStep);
+    this.run.spawnInterval = Math.max(
+      CONFIG.fall.intervalMin, this.run.spawnInterval * CONFIG.fall.intervalStep);
+
+    this.spawnTimer.reset({
+      delay: this.run.spawnInterval,
+      loop: true,
+      callback: () => this.spawnBox()
+    });
+  }
+
+  // Держит скорость падения ровно такой, как в CONFIG: сопротивление воздуха
+  // и касания друг о друга иначе тормозят коробки в полёте
+  holdFallSpeed() {
+    const v = this.run.fallSpeed / 60;
+    this.fallingBoxes.forEach(box => box.setVelocity(0, v));
+  }
+
+  // Коробка, улетевшая ниже пола, — промах
+  checkMissedBoxes() {
+    for (let i = this.fallingBoxes.length - 1; i >= 0; i--) {
+      const box = this.fallingBoxes[i];
+      if (box.y > CONFIG.bounds.groundY) {
+        box.boxData.state = 'missed';
+        box.destroy();
+        this.fallingBoxes.splice(i, 1);
+      }
+    }
+  }
+
+  // Груз, вывалившийся за борт, — потеря
+  checkCargoOverboard() {
+    const cx = this.cartBody.position.x;
+    const cy = this.cartBody.position.y;
+
+    for (let i = this.cargo.length - 1; i >= 0; i--) {
+      const box = this.cargo[i];
+      const outX = Math.abs(box.x - cx) > CONFIG.bounds.cargoDropX;
+      const outY = box.y > cy + CONFIG.bounds.cargoDropY;
+
+      if (outX || outY) {
+        box.boxData.state = 'missed';
+        this.cargo.splice(i, 1);
+        this.flashError();
+        box.destroy();
+      }
+    }
+  }
+
+  /* ---------- временный отладочный вывод (заменится HUD на этапе 3) ---------- */
+  createDebugReadout() {
+    this.readout = this.add.text(16, 14, '', {
+      fontFamily: 'Segoe UI, sans-serif', fontSize: '18px', color: CONFIG.colors.text
+    }).setDepth(20);
+
+    this.add.text(CONFIG.screen.width / 2, CONFIG.screen.height - 26,
+      '↑ ↓ — рельса  ·  Пробел — сбросить груз  ·  Esc — пауза', {
+      fontFamily: 'Segoe UI, sans-serif', fontSize: '16px', color: CONFIG.colors.textDim
+    }).setOrigin(0.5).setDepth(20);
+  }
+
+  updateDebugReadout() {
+    const seconds = Math.floor(this.run.elapsed / 1000);
+    this.readout.setText(
+      `Груз: ${this.cargo.length} шт   ·   В воздухе: ${this.fallingBoxes.length}   ·   ` +
+      `Скорость: ${Math.round(this.run.fallSpeed)} px/с   ·   Время: ${seconds} с`
+    );
+  }
+
+  pauseGame() {
+    this.scene.pause();
+    this.scene.launch('PauseScene');
+  }
+}
+
+/* ============================================================================
+   PauseScene — поверх игры, физика при этом стоит
+   ========================================================================= */
+class PauseScene extends Phaser.Scene {
+  constructor() { super('PauseScene'); }
+
+  create() {
+    const { width, height } = CONFIG.screen;
+
+    this.add.rectangle(0, 0, width, height, 0x000000, 0.6)
+      .setOrigin(0).setDepth(0);
+
+    this.add.text(width / 2, height / 2 - 70, 'ПАУЗА', {
+      fontFamily: 'Segoe UI, sans-serif', fontSize: '54px',
+      fontStyle: 'bold', color: '#ffffff'
+    }).setOrigin(0.5);
+
+    this.makeButton(width / 2, height / 2 + 10, 'ПРОДОЛЖИТЬ', () => this.resumeGame());
+    this.makeButton(width / 2, height / 2 + 90, 'В МЕНЮ', () => {
+      this.scene.stop('GameScene');
+      this.scene.stop();
+      this.scene.start('MenuScene');
+    });
+
+    this.input.keyboard.on('keydown-ESC', () => this.resumeGame());
+    this.input.keyboard.on('keydown-P', () => this.resumeGame());
+  }
+
+  resumeGame() {
+    this.scene.stop();
+    this.scene.resume('GameScene');
+  }
+
+  makeButton(x, y, label, onClick) {
+    const box = this.add.rectangle(x, y, 260, 58, CONFIG.colors.blue)
+      .setInteractive({ useHandCursor: true });
+    this.add.text(x, y, label, {
+      fontFamily: 'Segoe UI, sans-serif', fontSize: '24px',
+      fontStyle: 'bold', color: '#ffffff'
+    }).setOrigin(0.5);
+
+    box.on('pointerover', () => box.setFillStyle(CONFIG.colors.yellow));
+    box.on('pointerout', () => box.setFillStyle(CONFIG.colors.blue));
+    box.on('pointerdown', onClick);
+  }
+}
+
+/* ============================================================================
+   GameOverScene — каркас, включится на этапе 2 вместе с XP
+   ========================================================================= */
+class GameOverScene extends Phaser.Scene {
+  constructor() { super('GameOverScene'); }
+
+  init(data) { this.finalScore = data.score || 0; }
+
+  create() {
+    const { width, height } = CONFIG.screen;
+    this.cameras.main.setBackgroundColor(CONFIG.colors.bg);
+
+    const save = SaveManager.load();
+    const isRecord = this.finalScore > save.bestScore;
+    if (isRecord) {
+      save.bestScore = this.finalScore;
+      SaveManager.save(save);
+    }
+
+    this.add.text(width / 2, height / 2 - 110, 'ЗАБЕГ ОКОНЧЕН', {
+      fontFamily: 'Segoe UI, sans-serif', fontSize: '52px',
+      fontStyle: 'bold', color: CONFIG.colors.text
+    }).setOrigin(0.5);
+
+    this.add.text(width / 2, height / 2 - 40, `Счёт: ${this.finalScore}`, {
+      fontFamily: 'Segoe UI, sans-serif', fontSize: '32px', color: CONFIG.colors.text
+    }).setOrigin(0.5);
+
+    this.add.text(width / 2, height / 2, isRecord
+      ? 'Новый рекорд!'
+      : `Рекорд: ${save.bestScore}`, {
+      fontFamily: 'Segoe UI, sans-serif', fontSize: '22px',
+      color: isRecord ? '#3f9e5a' : CONFIG.colors.textDim
+    }).setOrigin(0.5);
+
+    this.makeButton(width / 2 - 140, height / 2 + 80, 'ЕЩЁ РАЗ',
+      () => this.scene.start('GameScene'));
+    this.makeButton(width / 2 + 140, height / 2 + 80, 'В МЕНЮ',
+      () => this.scene.start('MenuScene'));
+  }
+
+  makeButton(x, y, label, onClick) {
+    const box = this.add.rectangle(x, y, 240, 58, CONFIG.colors.blue)
+      .setInteractive({ useHandCursor: true });
+    this.add.text(x, y, label, {
+      fontFamily: 'Segoe UI, sans-serif', fontSize: '24px',
+      fontStyle: 'bold', color: '#ffffff'
+    }).setOrigin(0.5);
+
+    box.on('pointerover', () => box.setFillStyle(CONFIG.colors.yellow));
+    box.on('pointerout', () => box.setFillStyle(CONFIG.colors.blue));
+    box.on('pointerdown', onClick);
+  }
+}
+
+/* ============================================================================
+   Запуск
+   ========================================================================= */
+const gameConfig = {
+  type: Phaser.AUTO,
+  width: CONFIG.screen.width,
+  height: CONFIG.screen.height,
+  backgroundColor: CONFIG.colors.bg,
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH
+  },
+  physics: {
+    default: 'matter',
+    matter: {
+      gravity: { x: 0, y: CONFIG.physics.gravityY },
+      debug: CONFIG.debug
+    }
+  },
+  scene: [BootScene, MenuScene, GameScene, PauseScene, GameOverScene]
+};
+
+new Phaser.Game(gameConfig);
+</script>
+</body>
+</html>
