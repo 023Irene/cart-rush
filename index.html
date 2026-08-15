@@ -58,6 +58,8 @@ const CONFIG = {
     glowFront: 0xe8b33a,   // тёплая подсветка передней
     boxBlue:   0x3d7ad6,
     boxYellow: 0xe8b33a,
+    danger:    0xd64545,   // низкий XP, потеря груза, бомбы
+    booster:   0x5fbf7a,   // полный XP, бустер восстановления
     text:      '#e8eaed',
     textDim:   '#9aa0a8'
   },
@@ -103,8 +105,16 @@ const CONFIG = {
     intervalStep: 0.95    // −5 %
   },
 
-  // XP (используется с этапа 2)
-  xp: { start: 500 },
+  // XP. Ниже lowThreshold полоса краснеет и пульсирует
+  xp: { start: 500, lowThreshold: 150 },
+
+  // HUD
+  hud: {
+    xpBarWidth: 240,
+    xpBarHeight: 18,
+    hintDuration: 10000,   // мс, сколько висит подсказка клавиш в начале забега
+    pulsePeriod: 600       // мс, полупериод пульсации тревожной полосы
+  },
 
   // Физика груза
   physics: {
@@ -204,6 +214,11 @@ function makeBoxTexture(scene, key, sizePx, colorHex) {
   g.destroy();
 }
 
+// Цвета в CONFIG хранятся числами для Graphics; тексту Phaser нужна строка '#rrggbb'
+function hex(color) {
+  return '#' + color.toString(16).padStart(6, '0');
+}
+
 // Общий стиль текста, чтобы не повторять его в каждой сцене
 function textStyle(size, color, bold) {
   return {
@@ -301,6 +316,8 @@ class GameScene extends Phaser.Scene {
     this.cargo = [];          // коробки в кузове
     this.switching = false;
     this.over = false;        // забег окончен, ждём перехода на экран Game Over
+    this.xpLow = false;       // полоса XP в тревожном состоянии
+    this.xpPulse = null;
     this.bestScore = SaveManager.load().bestScore;
 
     // Положение тележки — источник истины сцены.
@@ -732,7 +749,7 @@ class GameScene extends Phaser.Scene {
     this.cargo.forEach(box => box.destroy());
     this.cargo = [];
 
-    this.showPopup(`+${gained}`, '#e8b33a');
+    this.showPopup(`+${gained}`, hex(CONFIG.colors.boxYellow));
   }
 
   /* ---------- XP и конец забега ---------- */
@@ -743,7 +760,7 @@ class GameScene extends Phaser.Scene {
   penalize(amount) {
     this.run.xp = Math.max(0, this.run.xp - amount);
     this.flashError();
-    this.showPopup(`−${amount} XP`, '#d64545');
+    this.showPopup(`−${amount} XP`, hex(CONFIG.colors.danger));
     if (this.run.xp === 0) this.endRun();
   }
 
@@ -854,29 +871,105 @@ class GameScene extends Phaser.Scene {
     }
   }
 
-  /* ---------- HUD (полосы и пульсация — этап 3) ---------- */
+  /* ---------- HUD ---------- */
   createHud() {
-    const { width, height } = CONFIG.screen;
+    const { width } = CONFIG.screen;
+    const h = CONFIG.hud;
 
-    // Верхняя строка: ресурс, счёт, рекорд
-    this.readout = this.add.text(16, 14, '', textStyle(18, CONFIG.colors.text)).setDepth(20);
+    // Полоса XP — верх слева. Перерисовывается каждый кадр по позиции, как тележка
+    this.xpBar = this.add.graphics().setDepth(20);
+    this.xpText = this.add.text(24 + h.xpBarWidth, 14, '',
+      textStyle(15, CONFIG.colors.textDim)).setDepth(20);
 
-    // Вторая строка: сколько груза и во сколько он оценивается прямо сейчас — это
-    // и есть цифра, ради которой игрок решает «сдать или взять ещё».
-    // Держим её вверху: рельсы стоят низко, и внизу по центру текст лёг бы на них
-    this.cargoLabel = this.add.text(16, 40, '',
+    // Вторая строка слева: сколько груза и во сколько он оценивается прямо сейчас —
+    // это и есть цифра, ради которой игрок решает «сдать или взять ещё».
+    // Внизу по центру её держать нельзя: там теперь проходят рельсы
+    this.cargoLabel = this.add.text(16, 44, '',
       textStyle(20, CONFIG.colors.text, true)).setDepth(20);
 
-    this.add.text(width / 2, height - 22,
+    // Счёт — главная цифра забега, крупно по центру. Коробки проходят за ним
+    this.scoreText = this.add.text(width / 2, 10, '0',
+      textStyle(36, CONFIG.colors.text, true)).setOrigin(0.5, 0).setDepth(20);
+    this.add.text(width / 2, 54, `Рекорд: ${this.bestScore}`,
+      textStyle(15, CONFIG.colors.textDim)).setOrigin(0.5, 0).setDepth(20);
+
+    this.createHint();
+  }
+
+  // Подсказка клавиш висит первые 10 секунд и гаснет: дальше список клавиш
+  // живёт в меню и на экране паузы
+  createHint() {
+    // Ставим на полосу пола под передней рельсой: в середине экрана подсказка
+    // оказывалась ровно на пути падающих коробок и резала их пополам
+    this.hint = this.add.text(CONFIG.screen.width / 2, CONFIG.screen.height - 24,
       '← → — ехать  ·  ↑ ↓ — рельса  ·  Пробел — сдать груз  ·  Esc — пауза',
-      textStyle(15, CONFIG.colors.textDim)).setOrigin(0.5).setDepth(20);
+      textStyle(16, CONFIG.colors.textDim)).setOrigin(0.5).setDepth(20);
+
+    this.time.delayedCall(CONFIG.hud.hintDuration, () => {
+      if (!this.hint) return;
+      this.tweens.add({
+        targets: this.hint,
+        alpha: 0,
+        duration: 600,
+        onComplete: () => { this.hint.destroy(); this.hint = null; }
+      });
+    });
+  }
+
+  xpRatio() {
+    return this.run.maxXp === 0 ? 0 : this.run.xp / this.run.maxXp;
+  }
+
+  // Пульсация включается ОДИН раз при пересечении порога, а не каждый кадр:
+  // иначе на полосе копились бы сотни твинов
+  setXpLow(low) {
+    if (low === this.xpLow) return;
+    this.xpLow = low;
+
+    if (this.xpPulse) {
+      this.xpPulse.stop();
+      this.xpPulse = null;
+    }
+    this.xpBar.setAlpha(1);
+
+    if (low) {
+      this.xpPulse = this.tweens.add({
+        targets: this.xpBar,
+        alpha: 0.45,
+        duration: CONFIG.hud.pulsePeriod,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
+      });
+    }
+  }
+
+  drawXpBar() {
+    const h = CONFIG.hud;
+    const g = this.xpBar;
+    const low = this.run.xp <= CONFIG.xp.lowThreshold;
+
+    this.setXpLow(low);
+
+    g.clear();
+
+    // Подложка
+    g.fillStyle(CONFIG.colors.cartDark, 1);
+    g.fillRect(16, 14, h.xpBarWidth, h.xpBarHeight);
+
+    // Заливка по остатку XP
+    g.fillStyle(low ? CONFIG.colors.danger : CONFIG.colors.booster, 1);
+    g.fillRect(16, 14, h.xpBarWidth * this.xpRatio(), h.xpBarHeight);
+
+    // Обводка отделяет полосу от фона
+    g.lineStyle(2, 0x000000, 0.35);
+    g.strokeRect(16, 14, h.xpBarWidth, h.xpBarHeight);
   }
 
   updateHud() {
-    this.readout.setText(
-      `XP: ${this.run.xp} / ${this.run.maxXp}      ` +
-      `Счёт: ${this.run.score}      Рекорд: ${this.bestScore}`
-    );
+    this.drawXpBar();
+    this.xpText.setText(`${this.run.xp} / ${this.run.maxXp} XP`);
+    this.scoreText.setText(String(this.run.score));
 
     this.cargoLabel.setText(this.cargo.length === 0
       ? 'Кузов пуст'
@@ -911,6 +1004,12 @@ class PauseScene extends Phaser.Scene {
       this.scene.stop();
       this.scene.start('MenuScene');
     });
+
+    // Список клавиш: на игровом экране подсказка гаснет через 10 с, и это
+    // единственное место, где её можно перечитать по ходу забега
+    this.add.text(width / 2, height - 40,
+      '← → — ехать  ·  ↑ ↓ — рельса  ·  Пробел — сдать груз  ·  Esc — пауза',
+      textStyle(16, CONFIG.colors.textDim)).setOrigin(0.5);
 
     this.input.keyboard.on('keydown-ESC', () => this.resumeGame());
     this.input.keyboard.on('keydown-P', () => this.resumeGame());
@@ -958,7 +1057,7 @@ class GameOverScene extends Phaser.Scene {
       textStyle(32, CONFIG.colors.text)).setOrigin(0.5);
 
     this.add.text(width / 2, height / 2, isRecord ? 'Новый рекорд!' : `Рекорд: ${save.bestScore}`,
-      textStyle(22, isRecord ? '#5fbf7a' : CONFIG.colors.textDim)).setOrigin(0.5);
+      textStyle(22, isRecord ? hex(CONFIG.colors.booster) : CONFIG.colors.textDim)).setOrigin(0.5);
 
     this.makeButton(width / 2 - 140, height / 2 + 80, 'ЕЩЁ РАЗ',
       () => this.scene.start('GameScene'));
