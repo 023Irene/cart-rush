@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Cart Rush</title>
+<!-- Иконка вкладки инлайном: без неё браузер сам просит /favicon.ico и пишет 404 в консоль -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%2333363b'/><rect x='3' y='5' width='10' height='6' fill='%23e8b33a'/><rect x='4' y='12' width='8' height='1' fill='%236b7078'/></svg>">
 <style>
   /* Страница только держит канву — вся отрисовка внутри Phaser.
      Никакого флекс-центрирования: канвас центрирует сам Phaser (CENTER_BOTH),
@@ -298,6 +300,8 @@ class GameScene extends Phaser.Scene {
     this.fallingBoxes = [];   // коробки в воздухе
     this.cargo = [];          // коробки в кузове
     this.switching = false;
+    this.over = false;        // забег окончен, ждём перехода на экран Game Over
+    this.bestScore = SaveManager.load().bestScore;
 
     // Положение тележки — источник истины сцены.
     // У составного тела Matter position — это центр масс, а не пол кузова,
@@ -709,11 +713,51 @@ class GameScene extends Phaser.Scene {
     this.cargo.push(box);
   }
 
-  /* ---------- сдача груза (полностью появится на этапе 2) ---------- */
+  /* ---------- сдача груза ---------- */
+
+  // Цена сдачи: сумма ценностей × количество (GAME_SPEC.md, 5.4).
+  // Один метод на HUD и на начисление, чтобы показанная цифра не разошлась с реальной
+  cargoValue() {
+    const count = this.cargo.length;
+    if (count === 0) return 0;
+    return this.cargo.reduce((sum, box) => sum + box.boxData.value, 0) * count;
+  }
+
   unloadCargo() {
-    if (this.cargo.length === 0) return;
+    if (this.cargo.length === 0) return;   // пустой кузов не наказывается
+
+    const gained = this.cargoValue();
+    this.run.score += gained;
+
     this.cargo.forEach(box => box.destroy());
     this.cargo = [];
+
+    this.showPopup(`+${gained}`, '#e8b33a');
+  }
+
+  /* ---------- XP и конец забега ---------- */
+
+  // Единственная трата XP: груз, вывалившийся за борт. За промах не штрафуем —
+  // коробки падают на две рельсы, а тележка всегда на одной, и игрок терял бы
+  // XP за то, что не может быть в двух местах сразу (GAME_SPEC.md, 5.1)
+  penalize(amount) {
+    this.run.xp = Math.max(0, this.run.xp - amount);
+    this.flashError();
+    this.showPopup(`−${amount} XP`, '#d64545');
+    if (this.run.xp === 0) this.endRun();
+  }
+
+  endRun() {
+    if (this.over) return;
+    this.over = true;
+
+    this.spawnTimer.remove();
+    this.matter.world.off('collisionstart', this.onCollisionStart, this);
+
+    // Пауза перед экраном: игрок должен успеть увидеть, что именно его добило
+    this.time.delayedCall(800, () => {
+      this.scene.start('GameOverScene', { score: this.run.score });
+    });
   }
 
   /* ---------- обратная связь ---------- */
@@ -721,8 +765,25 @@ class GameScene extends Phaser.Scene {
     this.cameras.main.shake(120, 0.006);
   }
 
+  // Всплывающее число над тележкой. Частицы и полноценные попапы — этап 4
+  showPopup(text, color) {
+    const label = this.add.text(this.cart.x, this.cart.y - 60, text,
+      textStyle(22, color, true)).setOrigin(0.5).setDepth(20);
+
+    this.tweens.add({
+      targets: label,
+      y: label.y - 40,
+      alpha: 0,
+      duration: 700,
+      ease: 'Quad.easeOut',
+      onComplete: () => label.destroy()
+    });
+  }
+
   /* ---------- цикл ---------- */
   update(time, delta) {
+    if (this.over) return;   // забег кончился, ждём экран Game Over
+
     this.run.elapsed += delta;
 
     this.driveCart(delta);
@@ -784,34 +845,47 @@ class GameScene extends Phaser.Scene {
       const outY = box.y > this.cart.y + limitY;
 
       if (outX || outY) {
+        const penalty = box.boxData.penalty;   // читаем до destroy
         box.boxData.state = 'missed';
         this.cargo.splice(i, 1);
-        this.flashError();
         box.destroy();
+        this.penalize(penalty);
       }
     }
   }
 
-  /* ---------- временный отладочный вывод (заменится HUD на этапе 3) ---------- */
+  /* ---------- HUD (полосы и пульсация — этап 3) ---------- */
   createHud() {
+    const { width, height } = CONFIG.screen;
+
+    // Верхняя строка: ресурс, счёт, рекорд
     this.readout = this.add.text(16, 14, '', textStyle(18, CONFIG.colors.text)).setDepth(20);
 
-    this.add.text(CONFIG.screen.width / 2, CONFIG.screen.height - 24,
-      '← → — ехать  ·  ↑ ↓ — рельса  ·  Пробел — сбросить груз  ·  Esc — пауза',
-      textStyle(16, CONFIG.colors.textDim)).setOrigin(0.5).setDepth(20);
+    // Вторая строка: сколько груза и во сколько он оценивается прямо сейчас — это
+    // и есть цифра, ради которой игрок решает «сдать или взять ещё».
+    // Держим её вверху: рельсы стоят низко, и внизу по центру текст лёг бы на них
+    this.cargoLabel = this.add.text(16, 40, '',
+      textStyle(20, CONFIG.colors.text, true)).setDepth(20);
+
+    this.add.text(width / 2, height - 22,
+      '← → — ехать  ·  ↑ ↓ — рельса  ·  Пробел — сдать груз  ·  Esc — пауза',
+      textStyle(15, CONFIG.colors.textDim)).setOrigin(0.5).setDepth(20);
   }
 
   updateHud() {
-    const seconds = Math.floor(this.run.elapsed / 1000);
-    const railName = this.rail().key === 'back' ? 'задняя' : 'передняя';
     this.readout.setText(
-      `Груз: ${this.cargo.length} шт   ·   В воздухе: ${this.fallingBoxes.length}   ·   ` +
-      `Рельса: ${railName}   ·   Скорость: ${Math.round(this.run.fallSpeed)} px/с   ·   ` +
-      `Время: ${seconds} с`
+      `XP: ${this.run.xp} / ${this.run.maxXp}      ` +
+      `Счёт: ${this.run.score}      Рекорд: ${this.bestScore}`
     );
+
+    this.cargoLabel.setText(this.cargo.length === 0
+      ? 'Кузов пуст'
+      : `Груз: ${this.cargo.length} шт  →  сдать за ${this.cargoValue()}`);
   }
 
   pauseGame() {
+    // Пауза во время задержки перед Game Over заморозила бы отложенный переход
+    if (this.over) return;
     this.scene.pause();
     this.scene.launch('PauseScene');
   }
