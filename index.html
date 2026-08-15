@@ -113,7 +113,22 @@ const CONFIG = {
     xpBarWidth: 240,
     xpBarHeight: 18,
     hintDuration: 10000,   // мс, сколько висит подсказка клавиш в начале забега
-    pulsePeriod: 600       // мс, полупериод пульсации тревожной полосы
+    pulsePeriod: 600,      // мс, полупериод пульсации тревожной полосы
+    flashDuration: 140     // мс, вспышка полосы при потере XP
+  },
+
+  // Звук: сэмплы Kenney, CC0 (assets/audio/CREDITS.md)
+  audio: {
+    volume: 0.6,
+    catchCooldown: 60      // мс между «туками» ловли: пачка коробок иначе даёт кашу
+  },
+
+  // Частицы при сдаче груза
+  particles: {
+    perBox: 6,             // сколько частиц на коробку в сдаче
+    max: 48,               // потолок, чтобы большая сдача не выбрасывала сотни
+    speed: 260,
+    lifespan: 700
   },
 
   // Физика груза
@@ -168,7 +183,8 @@ const SaveManager = {
     bestScore: 0,
     currency: 0,
     upgrades: { walls: 0, battery: 0, suspension: 0 },
-    volume: 0.6
+    volume: 0.6,
+    muted: false
   },
 
   load() {
@@ -214,6 +230,15 @@ function makeBoxTexture(scene, key, sizePx, colorHex) {
   g.destroy();
 }
 
+// Квадратик для частиц при сдаче груза — той же природы, что и текстуры коробок
+function makeParticleTexture(scene, key, sizePx) {
+  const g = scene.make.graphics({ add: false });
+  g.fillStyle(0xffffff, 1);
+  g.fillRect(0, 0, sizePx, sizePx);
+  g.generateTexture(key, sizePx, sizePx);
+  g.destroy();
+}
+
 // Цвета в CONFIG хранятся числами для Graphics; тексту Phaser нужна строка '#rrggbb'
 function hex(color) {
   return '#' + color.toString(16).padStart(6, '0');
@@ -235,12 +260,28 @@ function textStyle(size, color, bold) {
 class BootScene extends Phaser.Scene {
   constructor() { super('BootScene'); }
 
+  // Звуки грузятся через fetch, поэтому игра работает только по http://
+  // (Live Server), а не двойным кликом по файлу — CORS, см. ADR-0001
+  preload() {
+    this.load.audio('catch', 'assets/audio/catch.ogg');
+    this.load.audio('deliver', 'assets/audio/deliver.ogg');
+    this.load.audio('error', 'assets/audio/error.ogg');
+    this.load.audio('gameover', 'assets/audio/gameover.ogg');
+  }
+
   create() {
     // Текстуры коробок: 3 размера × 2 цвета
     for (const [sizeName, spec] of Object.entries(CONFIG.boxes)) {
       makeBoxTexture(this, `box-${sizeName}-yellow`, spec.size, CONFIG.colors.boxYellow);
       makeBoxTexture(this, `box-${sizeName}-blue`, spec.size, CONFIG.colors.boxBlue);
     }
+    makeParticleTexture(this, 'particle', 6);
+
+    // Громкость и немой режим переживают перезагрузку
+    const save = SaveManager.load();
+    this.sound.volume = CONFIG.audio.volume;
+    this.sound.mute = save.muted;
+
     this.scene.start('MenuScene');
   }
 }
@@ -271,7 +312,7 @@ class MenuScene extends Phaser.Scene {
     });
 
     this.add.text(width / 2, height - 40,
-      '← → — ехать  ·  ↑ ↓ — сменить рельсу  ·  Пробел — сдать груз  ·  Esc — пауза',
+      '← → — ехать  ·  ↑ ↓ — сменить рельсу  ·  Пробел — сдать груз  ·  Esc — пауза  ·  M — звук',
       textStyle(16, CONFIG.colors.textDim)).setOrigin(0.5);
 
     // Запуск игры с клавиатуры, чтобы не тянуться к мыши
@@ -318,6 +359,13 @@ class GameScene extends Phaser.Scene {
     this.over = false;        // забег окончен, ждём перехода на экран Game Over
     this.xpLow = false;       // полоса XP в тревожном состоянии
     this.xpPulse = null;
+    this.xpFlashUntil = 0;    // до какого времени полоса вспыхивает белым
+    this.lastCatchSound = 0;
+
+    // На старте страницы аудиоконтекст ещё заблокирован браузером, и выставленный
+    // в BootScene mute мог не примениться. Забег начинается после нажатия клавиши,
+    // то есть контекст уже разблокирован — повторяем установку здесь
+    this.sound.mute = SaveManager.load().muted;
     this.bestScore = SaveManager.load().bestScore;
 
     // Положение тележки — источник истины сцены.
@@ -526,6 +574,25 @@ class GameScene extends Phaser.Scene {
 
     kb.on('keydown-ESC', () => this.pauseGame());
     kb.on('keydown-P', () => this.pauseGame());
+
+    kb.on('keydown-M', () => this.toggleMute());
+  }
+
+  // Отдельного экрана громкости в проекте не будет (anti-scope 16.9),
+  // но выключить звук одной клавишей игрок должен мочь.
+  //
+  // Источник истины — сохранение, а НЕ this.sound.mute: у Phaser сеттер пишет в
+  // Web Audio через setValueAtTime, а геттер читает gain.value, который в том же
+  // тике ещё старый. Читая обратно, мы сохранили бы предыдущее состояние.
+  toggleMute() {
+    const save = SaveManager.load();
+    const muted = !save.muted;
+
+    save.muted = muted;
+    SaveManager.save(save);
+    this.sound.mute = muted;
+
+    this.showPopup(muted ? 'звук выкл' : 'звук вкл', CONFIG.colors.textDim);
   }
 
   /* ---------- горизонтальный ход ---------- */
@@ -728,6 +795,12 @@ class GameScene extends Phaser.Scene {
 
     this.fallingBoxes = this.fallingBoxes.filter(b => b !== box);
     this.cargo.push(box);
+
+    // Пачка коробок, легшая одновременно, не должна давать пачку «туков»
+    if (this.time.now - this.lastCatchSound >= CONFIG.audio.catchCooldown) {
+      this.lastCatchSound = this.time.now;
+      this.sound.play('catch');
+    }
   }
 
   /* ---------- сдача груза ---------- */
@@ -744,12 +817,39 @@ class GameScene extends Phaser.Scene {
     if (this.cargo.length === 0) return;   // пустой кузов не наказывается
 
     const gained = this.cargoValue();
-    this.run.score += gained;
+    const count = this.cargo.length;
+    // Цвет вспышки — по цвету большинства в сдаче: сразу видно, что именно уехало
+    const blues = this.cargo.filter(b => b.boxData.color === 'blue').length;
+    const tint = blues * 2 > count ? CONFIG.colors.boxBlue : CONFIG.colors.boxYellow;
 
+    this.run.score += gained;
     this.cargo.forEach(box => box.destroy());
     this.cargo = [];
 
-    this.showPopup(`+${gained}`, hex(CONFIG.colors.boxYellow));
+    this.sound.play('deliver');
+    this.burstParticles(count, tint);
+    this.showPopup(`+${gained}`, hex(tint));
+  }
+
+  // Одноразовый выброс частиц из кузова: эмиттер сам себя убирает,
+  // иначе за забег их накопились бы сотни
+  burstParticles(count, tint) {
+    const p = CONFIG.particles;
+    const amount = Math.min(p.max, count * p.perBox);
+
+    const emitter = this.add.particles(this.cart.x, this.cart.y - 10, 'particle', {
+      speed: { min: p.speed * 0.35, max: p.speed },
+      angle: { min: 200, max: 340 },
+      lifespan: p.lifespan,
+      gravityY: 420,
+      scale: { start: this.cart.scale, end: 0 },
+      tint,
+      emitting: false
+    });
+    emitter.setDepth(this.rail().depthBox + 1);
+    emitter.explode(amount);
+
+    this.time.delayedCall(p.lifespan + 200, () => emitter.destroy());
   }
 
   /* ---------- XP и конец забега ---------- */
@@ -760,6 +860,10 @@ class GameScene extends Phaser.Scene {
   penalize(amount) {
     this.run.xp = Math.max(0, this.run.xp - amount);
     this.flashError();
+    this.sound.play('error');
+    // Вспышка полосы — флагом времени, а не твином: на полосе уже висит
+    // бесконечный твин пульсации, второй твин подрался бы с ним за alpha
+    this.xpFlashUntil = this.time.now + CONFIG.hud.flashDuration;
     this.showPopup(`−${amount} XP`, hex(CONFIG.colors.danger));
     if (this.run.xp === 0) this.endRun();
   }
@@ -768,6 +872,7 @@ class GameScene extends Phaser.Scene {
     if (this.over) return;
     this.over = true;
 
+    this.sound.play('gameover');
     this.spawnTimer.remove();
     this.matter.world.off('collisionstart', this.onCollisionStart, this);
 
@@ -902,7 +1007,7 @@ class GameScene extends Phaser.Scene {
     // Ставим на полосу пола под передней рельсой: в середине экрана подсказка
     // оказывалась ровно на пути падающих коробок и резала их пополам
     this.hint = this.add.text(CONFIG.screen.width / 2, CONFIG.screen.height - 24,
-      '← → — ехать  ·  ↑ ↓ — рельса  ·  Пробел — сдать груз  ·  Esc — пауза',
+      '← → — ехать  ·  ↑ ↓ — рельса  ·  Пробел — сдать груз  ·  Esc — пауза  ·  M — звук',
       textStyle(16, CONFIG.colors.textDim)).setOrigin(0.5).setDepth(20);
 
     this.time.delayedCall(CONFIG.hud.hintDuration, () => {
@@ -957,8 +1062,9 @@ class GameScene extends Phaser.Scene {
     g.fillStyle(CONFIG.colors.cartDark, 1);
     g.fillRect(16, 14, h.xpBarWidth, h.xpBarHeight);
 
-    // Заливка по остатку XP
-    g.fillStyle(low ? CONFIG.colors.danger : CONFIG.colors.booster, 1);
+    // Заливка по остатку XP; в момент потери полоса коротко вспыхивает белым
+    const flashing = this.time.now < this.xpFlashUntil;
+    g.fillStyle(flashing ? 0xffffff : (low ? CONFIG.colors.danger : CONFIG.colors.booster), 1);
     g.fillRect(16, 14, h.xpBarWidth * this.xpRatio(), h.xpBarHeight);
 
     // Обводка отделяет полосу от фона
@@ -1008,7 +1114,7 @@ class PauseScene extends Phaser.Scene {
     // Список клавиш: на игровом экране подсказка гаснет через 10 с, и это
     // единственное место, где её можно перечитать по ходу забега
     this.add.text(width / 2, height - 40,
-      '← → — ехать  ·  ↑ ↓ — рельса  ·  Пробел — сдать груз  ·  Esc — пауза',
+      '← → — ехать  ·  ↑ ↓ — рельса  ·  Пробел — сдать груз  ·  Esc — пауза  ·  M — звук',
       textStyle(16, CONFIG.colors.textDim)).setOrigin(0.5);
 
     this.input.keyboard.on('keydown-ESC', () => this.resumeGame());
