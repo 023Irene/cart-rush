@@ -43,6 +43,7 @@ const CONFIG = {
   // Палитра grey box: серым рисуется всё, цвет остаётся только там, где несёт смысл
   colors: {
     bg:        0x33363b,   // тёмно-серый цех
+    bed:       0x2f3237,   // полотно между рельсами
     ground:    0x2b2e33,   // пол чуть темнее фона
     cart:      0x7a7f87,   // тележка — плоский серый, без секций
     cartDark:  0x5c626b,
@@ -58,10 +59,12 @@ const CONFIG = {
 
   // Рельсы. yFactor — доля высоты экрана, scale — перспектива (дальняя мельче),
   // color — единственный цвет коробок, который на эту рельсу падает.
+  // Обе рельсы стоят вплотную внизу экрана и образуют одно полотно: разнесённые
+  // по высоте, они читались как «верхняя и нижняя линии», а не как глубина.
   rails: [
-    { key: 'back',  yFactor: 0.44, scale: 0.82, color: 'blue',   glow: 'glowBack',
+    { key: 'back',  yFactor: 0.68, scale: 0.82, color: 'blue',   glow: 'glowBack',
       depthRail: 2, depthBox: 3, depthCart: 4 },
-    { key: 'front', yFactor: 0.78, scale: 1.00, color: 'yellow', glow: 'glowFront',
+    { key: 'front', yFactor: 0.84, scale: 1.00, color: 'yellow', glow: 'glowFront',
       depthRail: 8, depthBox: 9, depthCart: 10 }
   ],
 
@@ -117,11 +120,14 @@ const CONFIG = {
 };
 
 /* Ширина под пропорции окна: тогда Scale.FIT растягивает канвас ровно на окно
-   и тёмных полос по краям не остаётся. Высота логически фиксирована. */
+   и тёмных полос по краям не остаётся. Высота логически фиксирована.
+   Клампим именно ПРОПОРЦИЮ, а не ширину в пикселях: уже 4:3 поле становится тесным,
+   а шире 16:9 тележка перестаёт успевать доехать до коробки на другом краю. */
 (function fitScreenToWindow() {
   const h = CONFIG.screen.height;
   const ratio = (window.innerWidth || 1280) / (window.innerHeight || 720);
-  CONFIG.screen.width = Math.min(1700, Math.max(820, Math.round(h * ratio)));
+  const fit = Math.min(16 / 9, Math.max(4 / 3, ratio));
+  CONFIG.screen.width = Math.round(h * fit);   // 853…1138 при высоте 640
 })();
 
 /* Категории столкновений Matter.
@@ -331,10 +337,17 @@ class GameScene extends Phaser.Scene {
 
   rail() { return CONFIG.rails[this.cart.rail]; }
 
-  /* ---------- фон: пол цеха и две рельсы ---------- */
+  /* ---------- фон: полотно, пол цеха и две рельсы ---------- */
   drawBackground() {
     const { width, height } = CONFIG.screen;
-    const g = this.add.graphics().setDepth(-10);
+    const g = this.add.graphics().setDepth(-9);
+
+    // Полотно между рельсами: без него даже сведённые вплотную рельсы читаются
+    // как две отдельные линии, а не как один путь, уходящий вглубь
+    const bedTop = this.railLineY(0) - 6;
+    const bedBottom = this.railLineY(1) + 20;
+    g.fillStyle(CONFIG.colors.bed, 1);
+    g.fillRect(0, bedTop, width, bedBottom - bedTop);
 
     // Пол цеха ниже передней рельсы — отделяет игровое поле от края экрана
     g.fillStyle(CONFIG.colors.ground, 1);
@@ -353,14 +366,17 @@ class GameScene extends Phaser.Scene {
     const glow = CONFIG.colors[rail.glow];
     const g = this.add.graphics().setDepth(rail.depthRail);
 
-    // Мягкое освещение: три полосы цвета рельсы с растущей плотностью
+    // Мягкое освещение: три полосы цвета рельсы с растущей плотностью.
+    // Ближняя рельса заметно ярче дальней — иначе синий, который на тёмно-сером
+    // контрастнее жёлтого, вытягивает дальнюю рельсу вперёд и ломает перспективу
+    const dim = far ? 0.55 : 1.35;
     const layers = [
       { h: 44 * s, a: 0.05 },
       { h: 26 * s, a: 0.09 },
       { h: 11 * s, a: 0.17 }
     ];
     layers.forEach(layer => {
-      g.fillStyle(glow, layer.a * (far ? 0.7 : 1));
+      g.fillStyle(glow, layer.a * dim);
       g.fillRect(0, y - layer.h / 2 + 3 * s, width, layer.h);
     });
 
@@ -376,7 +392,7 @@ class GameScene extends Phaser.Scene {
     g.fillRect(0, y, width, 6 * s);
 
     // Тонкий блик цвета рельсы поверх — подсказка «какой цвет сюда падает»
-    g.fillStyle(glow, far ? 0.45 : 0.6);
+    g.fillStyle(glow, far ? 0.35 : 0.75);
     g.fillRect(0, y, width, 2 * s);
   }
 
