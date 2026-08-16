@@ -108,6 +108,27 @@ const CONFIG = {
     intervalStep: 0.92    // −8 %
   },
 
+  // Бомбы (GAME_SPEC.md, 5.6). Появляются не сразу: первые полминуты игрок
+  // осваивается с потоком коробок
+  bombs: {
+    size: 40,
+    afterMs: 30000,      // с какой секунды забега начинают попадаться
+    chance: 0.12,        // доля спавнов, где вместо коробки прилетает бомба
+    penalty: 100,        // XP за пойманную бомбу
+    blastImpulse: 12,    // толчок грузу: разлетевшийся штабель — основное наказание.
+                         // Меньше 9 груз не перелетает борт в 34 px и просто подпрыгивает
+    blastParticles: 5,   // множитель выброса частиц, как у сдачи груза
+    shakeMs: 260         // тряска дольше, чем при потере одной коробки (120 мс)
+  },
+
+  // Бустер восстановления XP (GAME_SPEC.md, 5.7). Единственный бустер в MVP
+  booster: {
+    size: 36,
+    everyMs: 25000,      // как часто падает
+    amount: 150,         // +XP, но не выше стартового максимума
+    popupDuration: 1200  // мс жизни всплывающего текста в правом верхнем углу
+  },
+
   // XP. Стартовый запас поднят с 500: промах теперь тоже стоит XP (ADR-0003),
   // и часть утечки игрок не может предотвратить в принципе
   xp: { start: 700 },
@@ -127,7 +148,10 @@ const CONFIG = {
     catchVolume: 0.7,      // звук ловли играет чаще всех, поэтому он тише остальных
     catchStep: 60,         // центов вверх за каждую коробку в кузове
     catchSteps: 8,         // потолок ступеней: выше начинается писк
-    catchJitter: 25        // случайный разброс в центах, чтобы удары не были клонами
+    catchJitter: 25,       // случайный разброс в центах, чтобы удары не были клонами
+    errorCooldown: 120,    // мс между звуками ошибки: взрыв выбрасывает пачку коробок сразу
+    blastDetune: -700,     // взрыв бомбы — тот же error.ogg, но сильно ниже и длиннее
+    boosterDetune: 400     // подбор бустера — deliver.ogg выше обычного
   },
 
   // Мягкие тени под падающими коробками: показывают, куда именно коробка сядет
@@ -246,6 +270,46 @@ function makeBoxTexture(scene, key, sizePx, colorHex) {
   g.destroy();
 }
 
+// Бомба: красный квадрат с чёрным крестом. Спрайтов в проекте нет,
+// а «не лови это» должно читаться с одного взгляда
+function makeBombTexture(scene, key, sizePx) {
+  const g = scene.make.graphics({ add: false });
+
+  g.fillStyle(CONFIG.colors.danger, 1);
+  g.fillRect(0, 0, sizePx, sizePx);
+
+  g.lineStyle(2, 0x000000, 0.45);
+  g.strokeRect(1, 1, sizePx - 2, sizePx - 2);
+
+  const pad = sizePx * 0.26;
+  g.lineStyle(Math.round(sizePx * 0.13), 0x000000, 0.55);
+  g.lineBetween(pad, pad, sizePx - pad, sizePx - pad);
+  g.lineBetween(sizePx - pad, pad, pad, sizePx - pad);
+
+  g.generateTexture(key, sizePx, sizePx);
+  g.destroy();
+}
+
+// Бустер: зелёный квадрат с белым плюсом — «поймай, и станет лучше»
+function makeBoosterTexture(scene, key, sizePx) {
+  const g = scene.make.graphics({ add: false });
+
+  g.fillStyle(CONFIG.colors.booster, 1);
+  g.fillRect(0, 0, sizePx, sizePx);
+
+  g.lineStyle(2, 0x000000, 0.35);
+  g.strokeRect(1, 1, sizePx - 2, sizePx - 2);
+
+  const arm = sizePx * 0.52;
+  const thick = sizePx * 0.16;
+  g.fillStyle(0xffffff, 0.9);
+  g.fillRect((sizePx - arm) / 2, (sizePx - thick) / 2, arm, thick);
+  g.fillRect((sizePx - thick) / 2, (sizePx - arm) / 2, thick, arm);
+
+  g.generateTexture(key, sizePx, sizePx);
+  g.destroy();
+}
+
 // Квадратик для частиц при сдаче груза — той же природы, что и текстуры коробок
 function makeParticleTexture(scene, key, sizePx) {
   const g = scene.make.graphics({ add: false });
@@ -336,6 +400,8 @@ class BootScene extends Phaser.Scene {
       makeBoxTexture(this, `box-${sizeName}-yellow`, spec.size, CONFIG.colors.boxYellow);
       makeBoxTexture(this, `box-${sizeName}-blue`, spec.size, CONFIG.colors.boxBlue);
     }
+    makeBombTexture(this, 'bomb', CONFIG.bombs.size);
+    makeBoosterTexture(this, 'booster', CONFIG.booster.size);
     makeParticleTexture(this, 'particle', 6);
 
     // Громкость и немой режим переживают перезагрузку
@@ -418,6 +484,7 @@ class GameScene extends Phaser.Scene {
     this.over = false;        // забег окончен, ждём перехода на экран Game Over
     this.xpFlashUntil = 0;    // до какого времени полоса вспыхивает белым
     this.lastCatchSound = 0;
+    this.lastErrorSound = 0;
     this.holdTime = 0;        // сколько мс держится текущее направление — из этого разгон
     this.holdDir = 0;
     this.hintTimer = null;    // таймер затухания подсказки, перезапускается по H
@@ -446,11 +513,19 @@ class GameScene extends Phaser.Scene {
     this.createInput();
     this.createHud();
 
-    // Спавн коробок по таймеру; интервал пересоздаётся при росте темпа
+    // Спавн по таймеру; интервал пересоздаётся при росте темпа
     this.spawnTimer = this.time.addEvent({
       delay: this.run.spawnInterval,
       loop: true,
-      callback: () => this.spawnBox()
+      callback: () => this.spawnNext()
+    });
+
+    // Бустер восстановления XP идёт своим ровным ритмом и от темпа не зависит:
+    // иначе на разгоне он сыпался бы чаще и обесценивал бы утечку XP
+    this.boosterTimer = this.time.addEvent({
+      delay: CONFIG.booster.everyMs,
+      loop: true,
+      callback: () => this.spawnBooster()
     });
 
     // Ловля: коробка становится грузом при первом касании тележки или груза
@@ -799,21 +874,35 @@ class GameScene extends Phaser.Scene {
     });
   }
 
-  /* ---------- спавн коробок ---------- */
-  spawnBox() {
-    const sizeName = this.pickSize();
-    const spec = CONFIG.boxes[sizeName];
+  /* ---------- спавн падающих объектов ---------- */
 
-    // Сначала выбирается рельса, а цвет жёстко следует из неё:
-    // синие падают только на заднюю, жёлтые только на переднюю
-    const railIndex = Math.random() < 0.5 ? 0 : 1;
+  // Что прилетит следующим. С 30-й секунды часть спавнов занимают бомбы:
+  // первые полминуты игрок осваивается с одним только потоком коробок
+  spawnNext() {
+    const b = CONFIG.bombs;
+    if (this.run.elapsed >= b.afterMs && Math.random() < b.chance) {
+      this.spawnBomb();
+      return;
+    }
+    this.spawnBox();
+  }
+
+  // Рельса выбирается 50/50 для всего, что падает
+  randomRail() {
+    return Math.random() < 0.5 ? 0 : 1;
+  }
+
+  // Общая часть всех падающих объектов: тело, масштаб рельсы, фильтр столкновений,
+  // отсутствие гравитации в полёте и постоянная скорость.
+  // missPenalty по умолчанию 0 — пропустить бомбу или бустер ничего не стоит
+  spawnFaller(texture, sizePx, railIndex, data) {
     const rail = CONFIG.rails[railIndex];
 
-    // Коробка может появиться в любой точке по ширине — тележка её догоняет
-    const margin = spec.size * rail.scale / 2 + 8;
+    // Объект может появиться в любой точке по ширине — тележка его догоняет
+    const margin = sizePx * rail.scale / 2 + 8;
     const x = Phaser.Math.Between(margin, CONFIG.screen.width - margin);
 
-    const box = this.matter.add.image(x, -spec.size, `box-${sizeName}-${rail.color}`, null, {
+    const obj = this.matter.add.image(x, -sizePx, texture, null, {
       friction: CONFIG.physics.boxFriction,
       frictionAir: CONFIG.physics.boxFrictionAir,
       restitution: CONFIG.physics.boxRestitution,
@@ -821,26 +910,50 @@ class GameScene extends Phaser.Scene {
     });
 
     // setScale у Matter-объекта Phaser масштабирует и картинку, и тело
-    box.setScale(rail.scale);
-    box.setDepth(rail.depthBox);
-    this.applyFilter(box.body, CAT.fall[railIndex], fallMask(railIndex));
+    obj.setScale(rail.scale);
+    obj.setDepth(rail.depthBox);
+    this.applyFilter(obj.body, CAT.fall[railIndex], fallMask(railIndex));
 
-    box.boxData = {
-      sizeName,
-      color: rail.color,
-      rail: railIndex,
-      value: spec.value,
-      penalty: spec.penalty,
-      missPenalty: spec.missPenalty,
-      state: 'falling'
-    };
+    obj.boxData = Object.assign(
+      { kind: 'box', rail: railIndex, state: 'falling', missPenalty: 0 }, data);
 
     // В полёте гравитации нет: скорость держится ровно такой, как в спеке,
     // и переназначается каждый кадр (иначе frictionAir погасит её на лету)
-    box.setIgnoreGravity(true);
-    box.setVelocity(0, this.run.fallSpeed / 60);
+    obj.setIgnoreGravity(true);
+    obj.setVelocity(0, this.run.fallSpeed / 60);
 
-    this.fallingBoxes.push(box);
+    this.fallingBoxes.push(obj);
+    return obj;
+  }
+
+  spawnBox() {
+    const sizeName = this.pickSize();
+    const spec = CONFIG.boxes[sizeName];
+
+    // Сначала выбирается рельса, а цвет жёстко следует из неё:
+    // синие падают только на заднюю, жёлтые только на переднюю
+    const railIndex = this.randomRail();
+    const rail = CONFIG.rails[railIndex];
+
+    this.spawnFaller(`box-${sizeName}-${rail.color}`, spec.size, railIndex, {
+      kind: 'box',
+      sizeName,
+      color: rail.color,
+      value: spec.value,
+      penalty: spec.penalty,
+      missPenalty: spec.missPenalty
+    });
+  }
+
+  // Бомба летит на случайную рельсу наравне с коробками: уехать на другую рельсу —
+  // законный способ увернуться, ради этого рельсы и разведены категориями Matter
+  spawnBomb() {
+    this.spawnFaller('bomb', CONFIG.bombs.size, this.randomRail(), { kind: 'bomb' });
+  }
+
+  spawnBooster() {
+    if (this.over) return;
+    this.spawnFaller('booster', CONFIG.booster.size, this.randomRail(), { kind: 'booster' });
   }
 
   // Выбор размера по весам из CONFIG
@@ -863,10 +976,10 @@ class GameScene extends Phaser.Scene {
 
       const other = this.resolveFallingBox(pair.bodyA) ? pair.bodyB : pair.bodyA;
 
-      // Коробка принимается и когда легла на тележку, и когда легла на уже
-      // накопленный груз — иначе верхние коробки продавливали бы штабель
+      // Объект ловится и когда лёг на тележку, и когда лёг на уже накопленный
+      // груз — иначе верхние коробки продавливали бы штабель
       if (this.isCartPart(other) || this.isCargoBody(other)) {
-        this.acceptBox(box);
+        this.catchFaller(box);
       }
     });
   }
@@ -885,6 +998,63 @@ class GameScene extends Phaser.Scene {
     const go = body.gameObject;
     if (go && go.boxData && go.boxData.state === 'falling') return go;
     return null;
+  }
+
+  // Что делает пойманное, зависит от вида: коробка ложится в кузов, бомба рвёт
+  // штабель, бустер возвращает XP
+  catchFaller(obj) {
+    if (obj.boxData.kind === 'bomb') return this.explodeBomb(obj);
+    if (obj.boxData.kind === 'booster') return this.collectBooster(obj);
+    this.acceptBox(obj);
+  }
+
+  // Убрать пойманный объект из воздуха, не делая его грузом
+  consumeFaller(obj, state) {
+    obj.boxData.state = state;
+    this.fallingBoxes = this.fallingBoxes.filter(item => item !== obj);
+    obj.destroy();
+  }
+
+  // Бомба: −100 XP плюс разлетевшийся штабель. Основное наказание — второе,
+  // поэтому импульс заметно сильнее, чем при смене рельсы (GAME_SPEC.md, 5.6)
+  explodeBomb(bomb) {
+    const b = CONFIG.bombs;
+    const x = bomb.x;
+    const y = bomb.y;
+
+    this.consumeFaller(bomb, 'exploded');
+
+    const impulse = b.blastImpulse;
+    this.cargo.forEach(box => {
+      this.matter.body.setVelocity(box.body, {
+        x: Phaser.Math.FloatBetween(-impulse, impulse),
+        y: -Math.abs(Phaser.Math.FloatBetween(impulse * 0.4, impulse))
+      });
+      this.matter.body.setAngularVelocity(box.body, Phaser.Math.FloatBetween(-0.2, 0.2));
+    });
+
+    // Взрыв — тот же error.ogg, но сильно ниже и оттого длиннее и глуше.
+    // Отдельного сэмпла в assets/audio/ пока нет
+    this.playErrorSound(CONFIG.audio.blastDetune);
+    this.cameras.main.shake(b.shakeMs, 0.012);
+    this.burstParticles(b.blastParticles, CONFIG.colors.danger, x, y);
+    this.xpFlashUntil = this.time.now + CONFIG.hud.flashDuration;
+    this.showPopup(`−${b.penalty} XP`, hex(CONFIG.colors.danger));
+    this.spendXp(b.penalty);
+  }
+
+  // Бустер: +150 XP, но не выше стартового максимума. Показываем то, что реально
+  // добавилось: на почти полном запасе это меньше номинала
+  collectBooster(booster) {
+    this.consumeFaller(booster, 'collected');
+
+    const before = this.run.xp;
+    this.run.xp = Math.min(this.run.maxXp, this.run.xp + CONFIG.booster.amount);
+
+    // На полном запасе бустер не даёт ничего, и «+0 XP» выглядело бы как баг
+    const gained = this.run.xp - before;
+    this.sound.play('deliver', { detune: CONFIG.audio.boosterDetune });
+    this.showBoosterPopup(gained > 0 ? `+${gained} XP` : 'XP полон');
   }
 
   // Секций и «чужого цвета» больше нет: коробка своей рельсы всегда принимается
@@ -952,11 +1122,15 @@ class GameScene extends Phaser.Scene {
 
   // Одноразовый выброс частиц из кузова: эмиттер сам себя убирает,
   // иначе за забег их накопились бы сотни
-  burstParticles(count, tint) {
+  burstParticles(count, tint, x, y) {
     const p = CONFIG.particles;
     const amount = Math.min(p.max, count * p.perBox);
 
-    const emitter = this.add.particles(this.cart.x, this.cart.y - 10, 'particle', {
+    // По умолчанию бьёт из кузова (сдача груза); взрыв бомбы задаёт свою точку
+    const px = x === undefined ? this.cart.x : x;
+    const py = y === undefined ? this.cart.y - 10 : y;
+
+    const emitter = this.add.particles(px, py, 'particle', {
       speed: { min: p.speed * 0.35, max: p.speed },
       angle: { min: 200, max: 340 },
       lifespan: p.lifespan,
@@ -982,7 +1156,7 @@ class GameScene extends Phaser.Scene {
   // Груз вывалился за борт — ошибка игрока, и она заявляет о себе громко
   penalizeDrop(amount) {
     this.flashError();
-    this.sound.play('error');
+    this.playErrorSound();
     // Вспышка полосы — флагом времени, а не твином: отрисовка полосы читает флаг
     this.xpFlashUntil = this.time.now + CONFIG.hud.flashDuration;
     this.showPopup(`−${amount} XP`, hex(CONFIG.colors.danger));
@@ -1003,6 +1177,7 @@ class GameScene extends Phaser.Scene {
 
     this.sound.play('gameover');
     this.spawnTimer.remove();
+    this.boosterTimer.remove();
     this.matter.world.off('collisionstart', this.onCollisionStart, this);
 
     // Пауза перед экраном: игрок должен успеть увидеть, что именно его добило
@@ -1012,8 +1187,34 @@ class GameScene extends Phaser.Scene {
   }
 
   /* ---------- обратная связь ---------- */
+
+  // Звук ошибки ограничен по частоте так же, как звук ловли: взрыв бомбы
+  // выбрасывает из кузова сразу несколько коробок, и каждая просила бы свой звук.
+  // detune задаёт взрыв — он звучит тем же сэмплом, но сильно ниже
+  playErrorSound(detune) {
+    if (this.time.now - this.lastErrorSound < CONFIG.audio.errorCooldown) return;
+    this.lastErrorSound = this.time.now;
+    this.sound.play('error', { detune: detune || 0 });
+  }
+
   flashError() {
     this.cameras.main.shake(120, 0.006);
+  }
+
+  // Бустер отчитывается в правом верхнем углу (GAME_SPEC.md, раздел 11):
+  // над тележкой ему тесно, там уже стоит цена сдачи
+  showBoosterPopup(text) {
+    const label = this.add.text(CONFIG.screen.width - 20, 20, text,
+      textStyle(22, hex(CONFIG.colors.booster), true)).setOrigin(1, 0).setDepth(20);
+
+    this.tweens.add({
+      targets: label,
+      y: label.y - 26,
+      alpha: 0,
+      duration: CONFIG.booster.popupDuration,
+      ease: 'Quad.easeOut',
+      onComplete: () => label.destroy()
+    });
   }
 
   // Мелкое приглушённое число в точке промаха: видно, что XP ушёл, но глаз не дёргается
@@ -1080,7 +1281,7 @@ class GameScene extends Phaser.Scene {
     this.spawnTimer.reset({
       delay: this.run.spawnInterval,
       loop: true,
-      callback: () => this.spawnBox()
+      callback: () => this.spawnNext()
     });
   }
 
@@ -1107,7 +1308,8 @@ class GameScene extends Phaser.Scene {
         box.boxData.state = 'missed';
         box.destroy();
         this.fallingBoxes.splice(i, 1);
-        this.penalizeMiss(penalty, x, y);
+        // Пропущенные бомба и бустер ничего не стоят: у них missPenalty = 0
+        if (penalty > 0) this.penalizeMiss(penalty, x, y);
       }
     }
   }
