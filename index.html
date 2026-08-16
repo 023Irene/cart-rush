@@ -123,7 +123,11 @@ const CONFIG = {
   // Звук: сэмплы Kenney, CC0 (assets/audio/CREDITS.md)
   audio: {
     volume: 0.6,
-    catchCooldown: 60      // мс между «туками» ловли: пачка коробок иначе даёт кашу
+    catchCooldown: 60,     // мс между «туками» ловли: пачка коробок иначе даёт кашу
+    catchVolume: 0.7,      // звук ловли играет чаще всех, поэтому он тише остальных
+    catchStep: 60,         // центов вверх за каждую коробку в кузове
+    catchSteps: 8,         // потолок ступеней: выше начинается писк
+    catchJitter: 25        // случайный разброс в центах, чтобы удары не были клонами
   },
 
   // Мягкие тени под падающими коробками: показывают, куда именно коробка сядет
@@ -896,8 +900,21 @@ class GameScene extends Phaser.Scene {
     // Пачка коробок, легшая одновременно, не должна давать пачку «туков»
     if (this.time.now - this.lastCatchSound >= CONFIG.audio.catchCooldown) {
       this.lastCatchSound = this.time.now;
-      this.sound.play('catch');
+      this.playCatchSound();
     }
+  }
+
+  // Тон «тука» растёт с каждой коробкой в кузове и сам сбрасывается после сдачи:
+  // серия ловель звучит восходящей фразой, а не десятком одинаковых ударов подряд.
+  // Сбрасывать вручную нечего — высота считается прямо из размера штабеля
+  playCatchSound() {
+    const a = CONFIG.audio;
+    const step = Math.min(this.cargo.length - 1, a.catchSteps);
+
+    this.sound.play('catch', {
+      volume: a.catchVolume,
+      detune: step * a.catchStep + Phaser.Math.Between(-a.catchJitter, a.catchJitter)
+    });
   }
 
   /* ---------- сдача груза ---------- */
