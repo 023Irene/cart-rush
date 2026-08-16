@@ -126,6 +126,15 @@ const CONFIG = {
     catchCooldown: 60      // мс между «туками» ловли: пачка коробок иначе даёт кашу
   },
 
+  // Мягкие тени под падающими коробками: показывают, куда именно коробка сядет
+  // по X, и дают ей вес. Чем ближе к своей рельсе, тем тень темнее и шире
+  shadows: {
+    alphaMin: 0.05,
+    alphaMax: 0.32,
+    widthMin: 0.5,       // доля ширины коробки в самом верху экрана
+    height: 9            // высота эллипса при масштабе 1.0
+  },
+
   // Частицы при сдаче груза
   particles: {
     perBox: 6,             // сколько частиц на коробку в сдаче
@@ -257,6 +266,51 @@ function textStyle(size, color, bold) {
   };
 }
 
+/* Список управления. Один источник на меню и паузу: раньше это была строка в 16 px,
+   продублированная в трёх местах, и на паузе она не читалась. */
+const KEY_HINTS = [
+  { keys: ['←', '→'], text: 'ехать вдоль рельсы' },
+  { keys: ['↑', '↓'], text: 'сменить рельсу' },
+  { keys: ['Пробел'], text: 'сдать груз и получить очки' },
+  { keys: ['Esc'], text: 'пауза' },
+  { keys: ['M'], text: 'звук вкл / выкл' },
+  { keys: ['H'], text: 'показать подсказку в забеге' }
+];
+
+// Таблица «клавиша → действие»: слева плашки-кейкапы, справа описание.
+// Плашки выкладываются справа налево от общей границы, поэтому колонка
+// описаний стоит ровно при любом количестве клавиш в строке
+function drawKeyHints(scene, centerX, topY) {
+  const rowHeight = 34;
+  const capHeight = 26;
+  const gap = 6;
+  const capsRight = centerX - 76;
+  const textLeft = centerX - 56;
+  const g = scene.add.graphics().setDepth(21);
+
+  KEY_HINTS.forEach((row, index) => {
+    const y = topY + index * rowHeight;
+    let x = capsRight;
+
+    row.keys.slice().reverse().forEach(key => {
+      const label = scene.add.text(0, 0, key, textStyle(14, CONFIG.colors.text, true))
+        .setOrigin(0.5).setDepth(22);
+      const capWidth = Math.max(28, label.width + 16);
+
+      g.fillStyle(CONFIG.colors.cart, 0.22);
+      g.fillRoundedRect(x - capWidth, y - capHeight / 2, capWidth, capHeight, 5);
+      g.lineStyle(1, CONFIG.colors.rail, 0.9);
+      g.strokeRoundedRect(x - capWidth, y - capHeight / 2, capWidth, capHeight, 5);
+
+      label.setPosition(x - capWidth / 2, y);
+      x -= capWidth + gap;
+    });
+
+    scene.add.text(textLeft, y, row.text, textStyle(16, CONFIG.colors.textDim))
+      .setOrigin(0, 0.5).setDepth(22);
+  });
+}
+
 /* ============================================================================
    BootScene — генерирует текстуры и уходит в меню
    ========================================================================= */
@@ -296,27 +350,25 @@ class MenuScene extends Phaser.Scene {
   constructor() { super('MenuScene'); }
 
   create() {
-    const { width, height } = CONFIG.screen;
+    const { width } = CONFIG.screen;
     this.cameras.main.setBackgroundColor(CONFIG.colors.bg);
 
-    this.add.text(width / 2, height / 2 - 130, 'CART RUSH',
+    this.add.text(width / 2, 96, 'CART RUSH',
       textStyle(72, CONFIG.colors.text, true)).setOrigin(0.5);
 
-    this.add.text(width / 2, height / 2 - 56,
+    this.add.text(width / 2, 164,
       'Синие коробки падают на заднюю рельсу, жёлтые — на переднюю',
       textStyle(20, CONFIG.colors.textDim)).setOrigin(0.5);
 
     const save = SaveManager.load();
-    this.add.text(width / 2, height / 2 - 22, `Рекорд: ${save.bestScore}`,
+    this.add.text(width / 2, 196, `Рекорд: ${save.bestScore}`,
       textStyle(20, CONFIG.colors.textDim)).setOrigin(0.5);
 
-    this.makeButton(width / 2, height / 2 + 50, 'ИГРАТЬ', () => {
+    this.makeButton(width / 2, 252, 'ИГРАТЬ', () => {
       this.scene.start('GameScene');
     });
 
-    this.add.text(width / 2, height - 40,
-      '← → — ехать  ·  ↑ ↓ — сменить рельсу  ·  Пробел — сдать груз  ·  Esc — пауза  ·  M — звук',
-      textStyle(16, CONFIG.colors.textDim)).setOrigin(0.5);
+    drawKeyHints(this, width / 2, 350);
 
     // Запуск игры с клавиатуры, чтобы не тянуться к мыши
     this.input.keyboard.once('keydown-SPACE', () => this.scene.start('GameScene'));
@@ -364,6 +416,8 @@ class GameScene extends Phaser.Scene {
     this.lastCatchSound = 0;
     this.holdTime = 0;        // сколько мс держится текущее направление — из этого разгон
     this.holdDir = 0;
+    this.hintTimer = null;    // таймер затухания подсказки, перезапускается по H
+    this.hintFade = null;
 
     // На старте страницы аудиоконтекст ещё заблокирован браузером, и выставленный
     // в BootScene mute мог не примениться. Забег начинается после нажатия клавиши,
@@ -383,6 +437,7 @@ class GameScene extends Phaser.Scene {
     };
 
     this.drawBackground();
+    this.createShadows();
     this.createCart();
     this.createInput();
     this.createHud();
@@ -469,6 +524,33 @@ class GameScene extends Phaser.Scene {
     // Тонкий блик цвета рельсы поверх — подсказка «какой цвет сюда падает»
     g.fillStyle(glow, far ? 0.35 : 0.75);
     g.fillRect(0, y, width, 2 * s);
+  }
+
+  /* ---------- тени падающих коробок ---------- */
+
+  // По слою на рельсу: тень лежит НА своей рельсе, но ПОД коробками, а у одной
+  // Graphics глубина всего одна — двумя рельсами в один слой не уложиться
+  createShadows() {
+    this.shadowLayers = CONFIG.rails.map(
+      rail => this.add.graphics().setDepth(rail.depthRail + 0.5));
+  }
+
+  drawShadows() {
+    const s = CONFIG.shadows;
+    this.shadowLayers.forEach(layer => layer.clear());
+
+    this.fallingBoxes.forEach(box => {
+      const railIndex = box.boxData.rail;
+      const y = this.railLineY(railIndex);
+
+      // Близость: 0 — коробка только появилась вверху, 1 — вот-вот сядет на рельсу
+      const t = Phaser.Math.Clamp(box.y / y, 0, 1);
+      const width = box.displayWidth * (s.widthMin + (1 - s.widthMin) * t);
+
+      const layer = this.shadowLayers[railIndex];
+      layer.fillStyle(0x000000, s.alphaMin + (s.alphaMax - s.alphaMin) * t);
+      layer.fillEllipse(box.x, y, width, s.height * CONFIG.rails[railIndex].scale);
+    });
   }
 
   /* ---------- тележка ---------- */
@@ -579,6 +661,7 @@ class GameScene extends Phaser.Scene {
     kb.on('keydown-P', () => this.pauseGame());
 
     kb.on('keydown-M', () => this.toggleMute());
+    kb.on('keydown-H', () => this.showHint());
   }
 
   // Отдельного экрана громкости в проекте не будет (anti-scope 16.9),
@@ -827,14 +910,19 @@ class GameScene extends Phaser.Scene {
     return this.cargo.reduce((sum, box) => sum + box.boxData.value, 0) * count;
   }
 
+  // Цвет большинства коробок в кузове: им красятся и ярлык цены, и частицы сдачи —
+  // сразу видно, что именно уехало
+  cargoTint() {
+    const blues = this.cargo.filter(b => b.boxData.color === 'blue').length;
+    return blues * 2 > this.cargo.length ? CONFIG.colors.boxBlue : CONFIG.colors.boxYellow;
+  }
+
   unloadCargo() {
     if (this.cargo.length === 0) return;   // пустой кузов не наказывается
 
     const gained = this.cargoValue();
     const count = this.cargo.length;
-    // Цвет вспышки — по цвету большинства в сдаче: сразу видно, что именно уехало
-    const blues = this.cargo.filter(b => b.boxData.color === 'blue').length;
-    const tint = blues * 2 > count ? CONFIG.colors.boxBlue : CONFIG.colors.boxYellow;
+    const tint = this.cargoTint();
 
     this.run.score += gained;
     this.cargo.forEach(box => box.destroy());
@@ -928,7 +1016,12 @@ class GameScene extends Phaser.Scene {
 
   // Всплывающее число над тележкой: сдача груза и потеря груза
   showPopup(text, color) {
-    const label = this.add.text(this.cart.x, this.cart.y - 60, text,
+    // Выше ярлыка цены, иначе «+400» при сдаче ложится ровно на него
+    const y = this.cargoPrice.visible
+      ? Math.min(this.cart.y - 60, this.cargoPrice.y - 30)
+      : this.cart.y - 60;
+
+    const label = this.add.text(this.cart.x, y, text,
       textStyle(22, color, true)).setOrigin(0.5).setDepth(20);
 
     this.tweens.add({
@@ -952,6 +1045,7 @@ class GameScene extends Phaser.Scene {
     this.holdFallSpeed();
     this.checkMissedBoxes();
     this.checkCargoOverboard();
+    this.drawShadows();
     this.drawCart();
     this.updateHud();
   }
@@ -1032,11 +1126,11 @@ class GameScene extends Phaser.Scene {
     this.xpText = this.add.text(24 + h.xpBarWidth, 14, '',
       textStyle(15, CONFIG.colors.textDim)).setDepth(20);
 
-    // Вторая строка слева: сколько груза и во сколько он оценивается прямо сейчас —
-    // это и есть цифра, ради которой игрок решает «сдать или взять ещё».
-    // Внизу по центру её держать нельзя: там теперь проходят рельсы
-    this.cargoLabel = this.add.text(16, 44, '',
-      textStyle(20, CONFIG.colors.text, true)).setDepth(20);
+    // Цена сдачи висит над кузовом, а не в углу HUD: решение «сдать или взять ещё»
+    // принимается глазами на тележке, туда же должна смотреть и цифра.
+    // Количество коробок не пишем — оно видно и так, коробки лежат физически
+    this.cargoPrice = this.add.text(0, 0, '', textStyle(24, CONFIG.colors.text, true))
+      .setOrigin(0.5, 1).setDepth(20).setVisible(false);
 
     // Счёт — главная цифра забега, крупно по центру. Коробки проходят за ним
     this.scoreText = this.add.text(width / 2, 10, '0',
@@ -1047,24 +1141,46 @@ class GameScene extends Phaser.Scene {
     this.createHint();
   }
 
-  // Подсказка клавиш висит первые 10 секунд и гаснет: дальше список клавиш
-  // живёт в меню и на экране паузы
+  // Подсказка клавиш висит первые 10 секунд и гаснет. Вернуть её можно клавишей H:
+  // после того как она погасла, подсмотреть управление по ходу забега было негде
   createHint() {
     // Ставим на полосу пола под передней рельсой: в середине экрана подсказка
     // оказывалась ровно на пути падающих коробок и резала их пополам
     this.hint = this.add.text(CONFIG.screen.width / 2, CONFIG.screen.height - 24,
-      '← → — ехать  ·  ↑ ↓ — рельса  ·  Пробел — сдать груз  ·  Esc — пауза  ·  M — звук',
+      '← → — ехать  ·  ↑ ↓ — рельса  ·  Пробел — сдать  ·  Esc — пауза  ·  M — звук  ·  H — эта строка',
       textStyle(16, CONFIG.colors.textDim)).setOrigin(0.5).setDepth(20);
 
-    this.time.delayedCall(CONFIG.hud.hintDuration, () => {
-      if (!this.hint) return;
-      this.tweens.add({
-        targets: this.hint,
-        alpha: 0,
-        duration: 600,
-        onComplete: () => { this.hint.destroy(); this.hint = null; }
-      });
+    this.showHint();
+  }
+
+  // Текст живёт весь забег и только меняет прозрачность: пересоздавать его на каждое
+  // нажатие H значило бы плодить объекты и таймеры, которые никто не убирает
+  showHint() {
+    if (this.hintFade) this.hintFade.stop();
+    if (this.hintTimer) this.hintTimer.remove();
+
+    this.hint.setAlpha(1);
+    this.hintTimer = this.time.delayedCall(CONFIG.hud.hintDuration, () => {
+      this.hintFade = this.tweens.add({ targets: this.hint, alpha: 0, duration: 600 });
     });
+  }
+
+  // Ярлык встаёт над ВЕРХНЕЙ коробкой штабеля, а не на фиксированной высоте:
+  // иначе высокий штабель залезал бы прямо на цифру
+  updateCargoPrice() {
+    if (this.cargo.length === 0) {
+      this.cargoPrice.setVisible(false);
+      return;
+    }
+
+    const top = this.cargo.reduce(
+      (min, box) => Math.min(min, box.y - box.displayHeight / 2), this.cart.y);
+
+    this.cargoPrice
+      .setVisible(true)
+      .setPosition(this.cart.x, top - 10)
+      .setText(String(this.cargoValue()))
+      .setColor(hex(this.cargoTint()));
   }
 
   xpRatio() {
@@ -1109,9 +1225,7 @@ class GameScene extends Phaser.Scene {
     this.xpText.setText(`${this.run.xp} / ${this.run.maxXp} XP`);
     this.scoreText.setText(String(this.run.score));
 
-    this.cargoLabel.setText(this.cargo.length === 0
-      ? 'Кузов пуст'
-      : `Груз: ${this.cargo.length} шт  →  сдать за ${this.cargoValue()}`);
+    this.updateCargoPrice();
   }
 
   pauseGame() {
@@ -1133,21 +1247,19 @@ class PauseScene extends Phaser.Scene {
 
     this.add.rectangle(0, 0, width, height, 0x000000, 0.65).setOrigin(0).setDepth(0);
 
-    this.add.text(width / 2, height / 2 - 70, 'ПАУЗА', textStyle(54, '#ffffff', true))
+    this.add.text(width / 2, 80, 'ПАУЗА', textStyle(54, '#ffffff', true))
       .setOrigin(0.5);
 
-    this.makeButton(width / 2, height / 2 + 10, 'ПРОДОЛЖИТЬ', () => this.resumeGame());
-    this.makeButton(width / 2, height / 2 + 90, 'В МЕНЮ', () => {
+    // Список клавиш таблицей, а не строкой в 16 px: на паузе он читается не мельком,
+    // и это единственное место, где управление можно спокойно разобрать
+    drawKeyHints(this, width / 2, 165);
+
+    this.makeButton(width / 2, 420, 'ПРОДОЛЖИТЬ', () => this.resumeGame());
+    this.makeButton(width / 2, 492, 'В МЕНЮ', () => {
       this.scene.stop('GameScene');
       this.scene.stop();
       this.scene.start('MenuScene');
     });
-
-    // Список клавиш: на игровом экране подсказка гаснет через 10 с, и это
-    // единственное место, где её можно перечитать по ходу забега
-    this.add.text(width / 2, height - 40,
-      '← → — ехать  ·  ↑ ↓ — рельса  ·  Пробел — сдать груз  ·  Esc — пауза  ·  M — звук',
-      textStyle(16, CONFIG.colors.textDim)).setOrigin(0.5);
 
     this.input.keyboard.on('keydown-ESC', () => this.resumeGame());
     this.input.keyboard.on('keydown-P', () => this.resumeGame());
