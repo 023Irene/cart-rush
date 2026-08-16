@@ -372,7 +372,7 @@ class MenuScene extends Phaser.Scene {
       this.scene.start('GameScene');
     });
 
-    drawKeyHints(this, width / 2, 350);
+    drawKeyHints(this, width / 2, 380);
 
     // Запуск игры с клавиатуры, чтобы не тянуться к мыши
     this.input.keyboard.once('keydown-SPACE', () => this.scene.start('GameScene'));
