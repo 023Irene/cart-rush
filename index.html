@@ -129,6 +129,33 @@ const CONFIG = {
     popupDuration: 1200  // мс жизни всплывающего текста в правом верхнем углу
   },
 
+  // Магазин улучшений (GAME_SPEC.md, 5.8). Валюта — очки, набранные за все забеги.
+  // Цены = пропорции спеки × 6. Множитель взят из замера: бот «среднего толкового
+  // игрока» набирает за забег около 10 500 очков, значит первая покупка доступна
+  // после первого забега, а всё вместе — примерно к десятому.
+  // Максимум уровней — это длина prices, отдельного поля не нужно
+  shop: {
+    order: ['walls', 'battery', 'suspension'],
+    walls: {
+      title: 'Высокие борта',
+      effect: '+8 px к высоте бортов за уровень',
+      prices: [3000, 9000, 24000],
+      step: 8
+    },
+    battery: {
+      title: 'Усиленный аккумулятор',
+      effect: '+100 к стартовому XP за уровень',
+      prices: [4800, 12000, 30000],
+      step: 100
+    },
+    suspension: {
+      title: 'Мягкая подвеска',
+      effect: '−15 % к импульсу груза при смене рельсы',
+      prices: [6000, 18000],
+      factor: 0.85
+    }
+  },
+
   // XP. Стартовый запас поднят с 500: промах теперь тоже стоит XP (ADR-0003),
   // и часть утечки игрок не может предотвратить в принципе
   xp: { start: 700 },
@@ -345,6 +372,31 @@ const KEY_HINTS = [
   { keys: ['H'], text: 'показать подсказку в забеге' }
 ];
 
+/* Кнопка из прямоугольника и текста — отдельных ассетов не нужно.
+   Была скопирована в трёх сценах почти дословно; магазин стал бы четвёртой копией.
+   opts: { width, height, size, disabled } */
+function makeButton(scene, x, y, label, onClick, opts) {
+  const o = opts || {};
+  const width = o.width || 240;
+  const height = o.height || 60;
+  const disabled = !!o.disabled;
+
+  const box = scene.add.rectangle(x, y, width, height,
+    disabled ? CONFIG.colors.cartDark : CONFIG.colors.boxBlue);
+  const text = scene.add.text(x, y, label,
+    textStyle(o.size || 26, disabled ? CONFIG.colors.textDim : '#ffffff', true)).setOrigin(0.5);
+
+  // Выключенная кнопка не реагирует вообще: ни курсором, ни подсветкой, ни нажатием
+  if (!disabled) {
+    box.setInteractive({ useHandCursor: true });
+    box.on('pointerover', () => box.setFillStyle(CONFIG.colors.boxYellow));
+    box.on('pointerout', () => box.setFillStyle(CONFIG.colors.boxBlue));
+    box.on('pointerdown', onClick);
+  }
+
+  return { box, text };
+}
+
 // Таблица «клавиша → действие»: слева плашки-кейкапы, справа описание.
 // Плашки выкладываются справа налево от общей границы, поэтому колонка
 // описаний стоит ровно при любом количестве клавиш в строке
@@ -431,30 +483,19 @@ class MenuScene extends Phaser.Scene {
       textStyle(20, CONFIG.colors.textDim)).setOrigin(0.5);
 
     const save = SaveManager.load();
-    this.add.text(width / 2, 196, `Рекорд: ${save.bestScore}`,
+    this.add.text(width / 2, 196, `Рекорд: ${save.bestScore}   ·   Монет: ${save.currency}`,
       textStyle(20, CONFIG.colors.textDim)).setOrigin(0.5);
 
-    this.makeButton(width / 2, 252, 'ИГРАТЬ', () => {
-      this.scene.start('GameScene');
-    });
+    makeButton(this, width / 2, 248, 'ИГРАТЬ', () => this.scene.start('GameScene'));
+    makeButton(this, width / 2, 316, 'МАГАЗИН',
+      () => this.scene.start('ShopScene', { from: 'MenuScene' }),
+      { width: 240, height: 54, size: 22 });
 
-    drawKeyHints(this, width / 2, 380);
+    drawKeyHints(this, width / 2, 396);
 
     // Запуск игры с клавиатуры, чтобы не тянуться к мыши
     this.input.keyboard.once('keydown-SPACE', () => this.scene.start('GameScene'));
     this.input.keyboard.once('keydown-ENTER', () => this.scene.start('GameScene'));
-  }
-
-  // Кнопка из прямоугольника и текста — отдельных ассетов не нужно
-  makeButton(x, y, label, onClick) {
-    const box = this.add.rectangle(x, y, 240, 60, CONFIG.colors.boxBlue)
-      .setInteractive({ useHandCursor: true });
-    const text = this.add.text(x, y, label, textStyle(26, '#ffffff', true)).setOrigin(0.5);
-
-    box.on('pointerover', () => box.setFillStyle(CONFIG.colors.boxYellow));
-    box.on('pointerout', () => box.setFillStyle(CONFIG.colors.boxBlue));
-    box.on('pointerdown', onClick);
-    return { box, text };
   }
 }
 
@@ -467,10 +508,13 @@ class GameScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor(CONFIG.colors.bg);
 
+    // Улучшения читаются один раз на забег и складываются в снимок
+    this.applyUpgrades();
+
     // --- состояние забега ---
     this.run = {
-      xp: CONFIG.xp.start,
-      maxXp: CONFIG.xp.start,
+      xp: this.upgrades.startXp,
+      maxXp: this.upgrades.startXp,
       score: 0,
       elapsed: 0,
       fallSpeed: CONFIG.fall.speedStart,
@@ -530,6 +574,23 @@ class GameScene extends Phaser.Scene {
 
     // Ловля: коробка становится грузом при первом касании тележки или груза
     this.matter.world.on('collisionstart', this.onCollisionStart, this);
+  }
+
+  /* ---------- купленные улучшения ---------- */
+
+  // Снимок улучшений на этот забег (GAME_SPEC.md, 5.8).
+  // CONFIG при этом НЕ трогаем: прибавь мы уровень прямо в CONFIG.cart.wallHeight,
+  // борта росли бы с каждым перезапуском забега внутри одной вкладки
+  applyUpgrades() {
+    const shop = CONFIG.shop;
+    const level = SaveManager.load().upgrades;
+
+    this.upgrades = {
+      wallHeight: CONFIG.cart.wallHeight + level.walls * shop.walls.step,
+      startXp: CONFIG.xp.start + level.battery * shop.battery.step,
+      railImpulse: CONFIG.cart.railImpulse *
+        Math.pow(shop.suspension.factor, level.suspension)
+    };
   }
 
   /* ---------- геометрия рельс ---------- */
@@ -650,7 +711,7 @@ class GameScene extends Phaser.Scene {
     const bedY = this.cart.y;
     const w = c.width * s;
     const ft = c.floorThickness * s;
-    const wh = c.wallHeight * s;
+    const wh = this.upgrades.wallHeight * s;   // высота бортов растёт от улучшения
     const wt = c.wallThickness * s;
 
     // Дно и два борта. Перегородки в середине нет: кузов единый
@@ -689,7 +750,7 @@ class GameScene extends Phaser.Scene {
     const w = c.width * s;
     const half = w / 2;
     const ft = c.floorThickness * s;
-    const wh = c.wallHeight * s;
+    const wh = this.upgrades.wallHeight * s;   // высота бортов растёт от улучшения
     const wt = c.wallThickness * s;
 
     g.clear();
@@ -836,8 +897,9 @@ class GameScene extends Phaser.Scene {
     this.cart.scale = CONFIG.rails[next].scale;
     this.switching = true;
 
-    // Груз получает толчок: резкий манёвр всегда рискует штабелем
-    const impulse = CONFIG.cart.railImpulse;
+    // Груз получает толчок: резкий манёвр всегда рискует штабелем.
+    // Мягкая подвеска из магазина этот толчок гасит
+    const impulse = this.upgrades.railImpulse;
     this.cargo.forEach(box => {
       this.matter.body.setVelocity(box.body, {
         x: Phaser.Math.FloatBetween(-impulse, impulse),
@@ -1180,9 +1242,17 @@ class GameScene extends Phaser.Scene {
     this.boosterTimer.remove();
     this.matter.world.off('collisionstart', this.onCollisionStart, this);
 
+    // Итог забега записывается здесь, а не на экране Game Over: на тот экран можно
+    // вернуться из магазина, и его create() начислил бы валюту второй раз
+    const save = SaveManager.load();
+    const isRecord = this.run.score > save.bestScore;
+    if (isRecord) save.bestScore = this.run.score;
+    save.currency += this.run.score;
+    SaveManager.save(save);
+
     // Пауза перед экраном: игрок должен успеть увидеть, что именно его добило
     this.time.delayedCall(800, () => {
-      this.scene.start('GameOverScene', { score: this.run.score });
+      this.scene.start('GameOverScene', { score: this.run.score, isRecord });
     });
   }
 
@@ -1473,12 +1543,13 @@ class PauseScene extends Phaser.Scene {
     // и это единственное место, где управление можно спокойно разобрать
     drawKeyHints(this, width / 2, 165);
 
-    this.makeButton(width / 2, 420, 'ПРОДОЛЖИТЬ', () => this.resumeGame());
-    this.makeButton(width / 2, 492, 'В МЕНЮ', () => {
+    makeButton(this, width / 2, 420, 'ПРОДОЛЖИТЬ', () => this.resumeGame(),
+      { width: 260, height: 58, size: 24 });
+    makeButton(this, width / 2, 492, 'В МЕНЮ', () => {
       this.scene.stop('GameScene');
       this.scene.stop();
       this.scene.start('MenuScene');
-    });
+    }, { width: 260, height: 58, size: 24 });
 
     this.input.keyboard.on('keydown-ESC', () => this.resumeGame());
     this.input.keyboard.on('keydown-P', () => this.resumeGame());
@@ -1488,16 +1559,6 @@ class PauseScene extends Phaser.Scene {
     this.scene.stop();
     this.scene.resume('GameScene');
   }
-
-  makeButton(x, y, label, onClick) {
-    const box = this.add.rectangle(x, y, 260, 58, CONFIG.colors.boxBlue)
-      .setInteractive({ useHandCursor: true });
-    this.add.text(x, y, label, textStyle(24, '#ffffff', true)).setOrigin(0.5);
-
-    box.on('pointerover', () => box.setFillStyle(CONFIG.colors.boxYellow));
-    box.on('pointerout', () => box.setFillStyle(CONFIG.colors.boxBlue));
-    box.on('pointerdown', onClick);
-  }
 }
 
 /* ============================================================================
@@ -1506,42 +1567,176 @@ class PauseScene extends Phaser.Scene {
 class GameOverScene extends Phaser.Scene {
   constructor() { super('GameOverScene'); }
 
-  init(data) { this.finalScore = data.score || 0; }
+  // Экран только показывает итог: рекорд и валюта уже записаны в endRun(),
+  // потому что сюда можно вернуться из магазина
+  init(data) {
+    this.finalScore = data.score || 0;
+    this.isRecord = !!data.isRecord;
+  }
+
+  create() {
+    const { width } = CONFIG.screen;
+    this.cameras.main.setBackgroundColor(CONFIG.colors.bg);
+
+    const save = SaveManager.load();
+    const isRecord = this.isRecord;
+
+    this.add.text(width / 2, 130, 'ЗАБЕГ ОКОНЧЕН',
+      textStyle(52, CONFIG.colors.text, true)).setOrigin(0.5);
+
+    this.add.text(width / 2, 212, `Счёт: ${this.finalScore}`,
+      textStyle(32, CONFIG.colors.text)).setOrigin(0.5);
+
+    this.add.text(width / 2, 256, isRecord ? 'Новый рекорд!' : `Рекорд: ${save.bestScore}`,
+      textStyle(22, isRecord ? hex(CONFIG.colors.booster) : CONFIG.colors.textDim)).setOrigin(0.5);
+
+    this.add.text(width / 2, 318, `Заработано: +${this.finalScore}`,
+      textStyle(24, hex(CONFIG.colors.boxYellow), true)).setOrigin(0.5);
+    this.add.text(width / 2, 350, `Всего монет: ${save.currency}`,
+      textStyle(18, CONFIG.colors.textDim)).setOrigin(0.5);
+
+    const opts = { width: 240, height: 58, size: 24 };
+    makeButton(this, width / 2 - 140, 424, 'ЕЩЁ РАЗ',
+      () => this.scene.start('GameScene'), opts);
+    makeButton(this, width / 2 + 140, 424, 'В МЕНЮ',
+      () => this.scene.start('MenuScene'), opts);
+
+    // Вход в магазин прямо отсюда: игрок только что получил валюту и готов её тратить
+    makeButton(this, width / 2, 496, 'МАГАЗИН', () => this.scene.start('ShopScene', {
+      from: 'GameOverScene',
+      returnData: { score: this.finalScore, isRecord: this.isRecord }
+    }), opts);
+  }
+}
+
+/* ============================================================================
+   ShopScene — магазин улучшений (GAME_SPEC.md, 5.8)
+   ========================================================================= */
+class ShopScene extends Phaser.Scene {
+  constructor() { super('ShopScene'); }
+
+  // Магазин открывается и из меню, и с экрана Game Over; НАЗАД возвращает туда же.
+  // returnData нужен экрану Game Over: он показывает счёт забега, а тот живёт
+  // только в параметрах сцены
+  init(data) {
+    this.from = (data && data.from) || 'MenuScene';
+    this.returnData = (data && data.returnData) || {};
+    this.confirmReset = false;
+  }
 
   create() {
     const { width, height } = CONFIG.screen;
     this.cameras.main.setBackgroundColor(CONFIG.colors.bg);
 
-    const save = SaveManager.load();
-    const isRecord = this.finalScore > save.bestScore;
-    if (isRecord) {
-      save.bestScore = this.finalScore;
-      SaveManager.save(save);
-    }
+    this.save = SaveManager.load();
 
-    this.add.text(width / 2, height / 2 - 110, 'ЗАБЕГ ОКОНЧЕН',
-      textStyle(52, CONFIG.colors.text, true)).setOrigin(0.5);
+    this.add.text(width / 2, 52, 'МАГАЗИН',
+      textStyle(44, CONFIG.colors.text, true)).setOrigin(0.5);
 
-    this.add.text(width / 2, height / 2 - 40, `Счёт: ${this.finalScore}`,
-      textStyle(32, CONFIG.colors.text)).setOrigin(0.5);
+    this.add.text(width - 24, 30, `Монет: ${this.save.currency}`,
+      textStyle(22, hex(CONFIG.colors.boxYellow), true)).setOrigin(1, 0.5);
 
-    this.add.text(width / 2, height / 2, isRecord ? 'Новый рекорд!' : `Рекорд: ${save.bestScore}`,
-      textStyle(22, isRecord ? hex(CONFIG.colors.booster) : CONFIG.colors.textDim)).setOrigin(0.5);
+    // Три линейки улучшений одной и той же строкой
+    CONFIG.shop.order.forEach((key, index) => this.drawRow(key, 140 + index * 112));
 
-    this.makeButton(width / 2 - 140, height / 2 + 80, 'ЕЩЁ РАЗ',
-      () => this.scene.start('GameScene'));
-    this.makeButton(width / 2 + 140, height / 2 + 80, 'В МЕНЮ',
-      () => this.scene.start('MenuScene'));
+    makeButton(this, width / 2, 500, 'НАЗАД', () => this.goBack(),
+      { width: 240, height: 54, size: 24 });
+
+    this.createResetButton(width / 2, height - 40);
+
+    this.input.keyboard.on('keydown-ESC', () => this.goBack());
   }
 
-  makeButton(x, y, label, onClick) {
-    const box = this.add.rectangle(x, y, 240, 58, CONFIG.colors.boxBlue)
-      .setInteractive({ useHandCursor: true });
-    this.add.text(x, y, label, textStyle(24, '#ffffff', true)).setOrigin(0.5);
+  goBack() {
+    this.scene.start(this.from, this.returnData);
+  }
 
-    box.on('pointerover', () => box.setFillStyle(CONFIG.colors.boxYellow));
-    box.on('pointerout', () => box.setFillStyle(CONFIG.colors.boxBlue));
-    box.on('pointerdown', onClick);
+  // Строка улучшения: название и эффект слева, уровни и покупка справа
+  drawRow(key, y) {
+    const spec = CONFIG.shop[key];
+    const level = this.save.upgrades[key];
+    const maxLevel = spec.prices.length;
+    const maxed = level >= maxLevel;
+    const price = maxed ? 0 : spec.prices[level];
+    const affordable = !maxed && this.save.currency >= price;
+
+    // Подложка строки — иначе три блока сливаются в сплошной текст
+    const g = this.add.graphics();
+    g.fillStyle(CONFIG.colors.bed, 1);
+    g.fillRoundedRect(40, y - 40, CONFIG.screen.width - 80, 88, 8);
+
+    this.add.text(64, y - 22, spec.title, textStyle(22, CONFIG.colors.text, true));
+    this.add.text(64, y + 8, spec.effect, textStyle(15, CONFIG.colors.textDim));
+
+    this.drawLevelPips(64, y + 34, level, maxLevel);
+
+    // Цена и кнопка. Не хватает монет — цена краснеет, кнопка гаснет
+    const priceColor = affordable ? hex(CONFIG.colors.boxYellow) : hex(CONFIG.colors.danger);
+    this.add.text(CONFIG.screen.width - 190, y + 2,
+      maxed ? 'куплено полностью' : `${price} монет`,
+      textStyle(17, maxed ? CONFIG.colors.textDim : priceColor, !maxed)).setOrigin(1, 0.5);
+
+    makeButton(this, CONFIG.screen.width - 110, y + 2, maxed ? 'МАКС' : 'КУПИТЬ',
+      () => this.buy(key), { width: 130, height: 44, size: 18, disabled: !affordable });
+  }
+
+  // Уровни кружками: закрашенный — купленный. Числом «2/3» это читается хуже
+  drawLevelPips(x, y, level, maxLevel) {
+    const g = this.add.graphics();
+    for (let i = 0; i < maxLevel; i++) {
+      const cx = x + 9 + i * 24;
+      if (i < level) {
+        g.fillStyle(CONFIG.colors.booster, 1);
+        g.fillCircle(cx, y, 7);
+      } else {
+        g.lineStyle(2, CONFIG.colors.rail, 1);
+        g.strokeCircle(cx, y, 7);
+      }
+    }
+  }
+
+  buy(key) {
+    const spec = CONFIG.shop[key];
+    const level = this.save.upgrades[key];
+    if (level >= spec.prices.length) return;
+
+    const price = spec.prices[level];
+    if (this.save.currency < price) return;
+
+    this.save.currency -= price;
+    this.save.upgrades[key] = level + 1;
+    SaveManager.save(this.save);
+
+    this.sound.play('deliver');
+
+    // Перерисовываем сцену целиком: это проще и надёжнее, чем точечно обновлять
+    // цену, кружки и состояние кнопки в трёх строках
+    this.scene.restart({ from: this.from, returnData: this.returnData });
+  }
+
+  // Сброс прогресса. Первое нажатие только переспрашивает, через 3 секунды
+  // вопрос снимается сам: случайно снести рекорд и все апгрейды нельзя
+  createResetButton(x, y) {
+    const label = this.add.text(x, y, 'сбросить прогресс',
+      textStyle(14, CONFIG.colors.textDim)).setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+
+    label.on('pointerdown', () => {
+      if (!this.confirmReset) {
+        this.confirmReset = true;
+        label.setText('точно? нажмите ещё раз').setColor(hex(CONFIG.colors.danger));
+        this.time.delayedCall(3000, () => {
+          if (!this.scene.isActive() || !this.confirmReset) return;
+          this.confirmReset = false;
+          label.setText('сбросить прогресс').setColor(CONFIG.colors.textDim);
+        });
+        return;
+      }
+
+      // Немой режим — настройка, а не прогресс: он сброс переживает
+      SaveManager.save({ ...SaveManager.defaults, muted: this.save.muted });
+      this.scene.restart({ from: this.from, returnData: this.returnData });
+    });
   }
 }
 
@@ -1565,7 +1760,7 @@ const gameConfig = {
       debug: CONFIG.debug
     }
   },
-  scene: [BootScene, MenuScene, GameScene, PauseScene, GameOverScene]
+  scene: [BootScene, MenuScene, GameScene, PauseScene, GameOverScene, ShopScene]
 };
 
 const game = new Phaser.Game(gameConfig);
