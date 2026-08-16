@@ -81,17 +81,20 @@ const CONFIG = {
     floorThickness: 12,
     wallHeight: 34,
     wallThickness: 12,
-    speed: 520,            // px/с горизонтального хода
+    speedBase: 430,        // px/с сразу после нажатия стрелки
+    speedMax: 780,         // px/с после полного разгона
+    accelTime: 600,        // мс удержания одной стрелки до максимальной скорости
     switchDuration: 150,   // мс на смену рельсы
     swayImpulse: 0.9,      // толчок грузу при рывке влево-вправо
     railImpulse: 2.2       // толчок грузу при смене рельсы
   },
 
-  // Коробки: размер -> габарит, ценность, штраф, доля в спавне
+  // Коробки: размер -> габарит, ценность, штрафы, доля в спавне.
+  // penalty — груз вывалился за борт, missPenalty — коробка упала мимо (ADR-0003)
   boxes: {
-    small:  { size: 32, value: 10, penalty: 30,  weight: 50 },
-    medium: { size: 48, value: 25, penalty: 80,  weight: 35 },
-    large:  { size: 64, value: 50, penalty: 150, weight: 15 }
+    small:  { size: 32, value: 10, penalty: 30,  missPenalty: 5,  weight: 50 },
+    medium: { size: 48, value: 25, penalty: 80,  missPenalty: 10, weight: 35 },
+    large:  { size: 64, value: 50, penalty: 150, missPenalty: 18, weight: 15 }
   },
 
   // Падение и темп (GAME_SPEC.md, раздел 5.3)
@@ -100,21 +103,21 @@ const CONFIG = {
     speedMax: 500,
     intervalStart: 1400,  // мс между коробками
     intervalMin: 350,
-    rampEvery: 20000,     // мс между ступенями роста
-    speedStep: 1.08,      // +8 %
-    intervalStep: 0.95    // −5 %
+    rampEvery: 15000,     // мс между ступенями роста
+    speedStep: 1.10,      // +10 %
+    intervalStep: 0.92    // −8 %
   },
 
-  // XP. Ниже lowThreshold полоса краснеет и пульсирует
-  xp: { start: 500, lowThreshold: 150 },
+  // XP. Стартовый запас поднят с 500: промах теперь тоже стоит XP (ADR-0003),
+  // и часть утечки игрок не может предотвратить в принципе
+  xp: { start: 700 },
 
   // HUD
   hud: {
     xpBarWidth: 240,
     xpBarHeight: 18,
-    hintDuration: 10000,   // мс, сколько висит подсказка клавиш в начале забега
-    pulsePeriod: 600,      // мс, полупериод пульсации тревожной полосы
-    flashDuration: 140     // мс, вспышка полосы при потере XP
+    hintDuration: 10000,   // мс, сколько висит подсказка клавиш (и сколько держится по H)
+    flashDuration: 140     // мс, вспышка полосы при потере груза
   },
 
   // Звук: сэмплы Kenney, CC0 (assets/audio/CREDITS.md)
@@ -357,10 +360,10 @@ class GameScene extends Phaser.Scene {
     this.cargo = [];          // коробки в кузове
     this.switching = false;
     this.over = false;        // забег окончен, ждём перехода на экран Game Over
-    this.xpLow = false;       // полоса XP в тревожном состоянии
-    this.xpPulse = null;
     this.xpFlashUntil = 0;    // до какого времени полоса вспыхивает белым
     this.lastCatchSound = 0;
+    this.holdTime = 0;        // сколько мс держится текущее направление — из этого разгон
+    this.holdDir = 0;
 
     // На старте страницы аудиоконтекст ещё заблокирован браузером, и выставленный
     // в BootScene mute мог не примениться. Забег начинается после нажатия клавиши,
@@ -602,12 +605,22 @@ class GameScene extends Phaser.Scene {
     const right = this.keys.right.isDown || this.keys.d.isDown;
     const dir = (left ? -1 : 0) + (right ? 1 : 0);
 
+    // Разгон при удержании: чем дольше держишь одну стрелку, тем быстрее едет тележка.
+    // Отпустил или развернулся — счётчик обнуляется, разгон начинается заново.
+    // Плата за скорость честная: разогнанная тележка на торможении сильнее бьёт по штабелю
+    if (dir === 0 || dir !== this.holdDir) this.holdTime = 0;
+    this.holdDir = dir;
+    if (dir !== 0) this.holdTime += delta;
+
+    const speed = Phaser.Math.Linear(
+      c.speedBase, c.speedMax, Math.min(1, this.holdTime / c.accelTime));
+
     // Упор в края экрана
     const half = (c.width * this.cart.scale) / 2;
     const minX = half;
     const maxX = CONFIG.screen.width - half;
 
-    let vx = dir * c.speed;
+    let vx = dir * speed;
     if ((this.cart.x <= minX && vx < 0) || (this.cart.x >= maxX && vx > 0)) vx = 0;
 
     // Рывок — разница скоростей: старт, торможение или разворот
@@ -625,7 +638,7 @@ class GameScene extends Phaser.Scene {
   // Это и есть ограничитель забега — физика вместо лимита вместимости.
   swayCargo(dvx) {
     if (this.cargo.length === 0) return;
-    const k = Math.abs(dvx) / CONFIG.cart.speed;   // 1 — старт или стоп, 2 — разворот
+    const k = Math.abs(dvx) / CONFIG.cart.speedMax;   // 1 — старт или стоп, 2 — разворот
     const push = -Math.sign(dvx) * CONFIG.cart.swayImpulse * k;
 
     this.cargo.forEach(box => {
@@ -731,6 +744,7 @@ class GameScene extends Phaser.Scene {
       rail: railIndex,
       value: spec.value,
       penalty: spec.penalty,
+      missPenalty: spec.missPenalty,
       state: 'falling'
     };
 
@@ -854,18 +868,28 @@ class GameScene extends Phaser.Scene {
 
   /* ---------- XP и конец забега ---------- */
 
-  // Единственная трата XP: груз, вывалившийся за борт. За промах не штрафуем —
-  // коробки падают на две рельсы, а тележка всегда на одной, и игрок терял бы
-  // XP за то, что не может быть в двух местах сразу (GAME_SPEC.md, 5.1)
-  penalize(amount) {
+  // Две траты XP: груз за бортом и промах. Общая часть — снять и проверить ноль
+  spendXp(amount) {
     this.run.xp = Math.max(0, this.run.xp - amount);
+    if (this.run.xp === 0) this.endRun();
+  }
+
+  // Груз вывалился за борт — ошибка игрока, и она заявляет о себе громко
+  penalizeDrop(amount) {
     this.flashError();
     this.sound.play('error');
-    // Вспышка полосы — флагом времени, а не твином: на полосе уже висит
-    // бесконечный твин пульсации, второй твин подрался бы с ним за alpha
+    // Вспышка полосы — флагом времени, а не твином: отрисовка полосы читает флаг
     this.xpFlashUntil = this.time.now + CONFIG.hud.flashDuration;
     this.showPopup(`−${amount} XP`, hex(CONFIG.colors.danger));
-    if (this.run.xp === 0) this.endRun();
+    this.spendXp(amount);
+  }
+
+  // Промах — тихий штраф (ADR-0003). Промахов бывает 20+ в минуту на старте и до 85
+  // на потолке разгона: тряска камеры и звук ошибки на каждом сделали бы игру
+  // неиграбельной. Остаётся только мелкое число в точке падения
+  penalizeMiss(amount, x, y) {
+    this.showMissLabel(x, y, `−${amount}`);
+    this.spendXp(amount);
   }
 
   endRun() {
@@ -887,7 +911,22 @@ class GameScene extends Phaser.Scene {
     this.cameras.main.shake(120, 0.006);
   }
 
-  // Всплывающее число над тележкой. Частицы и полноценные попапы — этап 4
+  // Мелкое приглушённое число в точке промаха: видно, что XP ушёл, но глаз не дёргается
+  showMissLabel(x, y, text) {
+    const label = this.add.text(x, y, text, textStyle(15, CONFIG.colors.textDim))
+      .setOrigin(0.5).setAlpha(0.85).setDepth(19);
+
+    this.tweens.add({
+      targets: label,
+      y: y - 22,
+      alpha: 0,
+      duration: 500,
+      ease: 'Quad.easeOut',
+      onComplete: () => label.destroy()
+    });
+  }
+
+  // Всплывающее число над тележкой: сдача груза и потеря груза
   showPopup(text, color) {
     const label = this.add.text(this.cart.x, this.cart.y - 60, text,
       textStyle(22, color, true)).setOrigin(0.5).setDepth(20);
@@ -942,15 +981,22 @@ class GameScene extends Phaser.Scene {
   }
 
   // Коробка, улетевшая ниже СВОЕЙ рельсы, — промах.
-  // Порог у каждой рельсы свой, иначе задняя коробка падала бы до передней
+  // Порог у каждой рельсы свой, иначе задняя коробка падала бы до передней.
+  // Промах стоит XP (ADR-0003), но штраф мелкий и тихий
   checkMissedBoxes() {
     for (let i = this.fallingBoxes.length - 1; i >= 0; i--) {
       const box = this.fallingBoxes[i];
       const limit = this.railLineY(box.boxData.rail) + CONFIG.bounds.missBelowRail;
       if (box.y > limit) {
+        // Всё нужное читаем до destroy: после него у объекта нет ни координат, ни данных
+        const penalty = box.boxData.missPenalty;
+        const x = box.x;
+        const y = box.y;
+
         box.boxData.state = 'missed';
         box.destroy();
         this.fallingBoxes.splice(i, 1);
+        this.penalizeMiss(penalty, x, y);
       }
     }
   }
@@ -971,7 +1017,7 @@ class GameScene extends Phaser.Scene {
         box.boxData.state = 'missed';
         this.cargo.splice(i, 1);
         box.destroy();
-        this.penalize(penalty);
+        this.penalizeDrop(penalty);
       }
     }
   }
@@ -1025,36 +1071,22 @@ class GameScene extends Phaser.Scene {
     return this.run.maxXp === 0 ? 0 : this.run.xp / this.run.maxXp;
   }
 
-  // Пульсация включается ОДИН раз при пересечении порога, а не каждый кадр:
-  // иначе на полосе копились бы сотни твинов
-  setXpLow(low) {
-    if (low === this.xpLow) return;
-    this.xpLow = low;
+  // Цвет полосы плавно едет от зелёного (полный XP) к красному (пустой).
+  // Порога и пульсации больше нет: мигающая полоса раздражала на длинной дистанции,
+  // а плавный цвет читается сам по себе, без твинов и без флага состояния
+  xpBarColor() {
+    const t = this.xpRatio();
+    const from = CONFIG.colors.danger;
+    const to = CONFIG.colors.booster;
+    const channel = shift => Math.round(
+      ((from >> shift) & 0xff) + (((to >> shift) & 0xff) - ((from >> shift) & 0xff)) * t);
 
-    if (this.xpPulse) {
-      this.xpPulse.stop();
-      this.xpPulse = null;
-    }
-    this.xpBar.setAlpha(1);
-
-    if (low) {
-      this.xpPulse = this.tweens.add({
-        targets: this.xpBar,
-        alpha: 0.45,
-        duration: CONFIG.hud.pulsePeriod,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut'
-      });
-    }
+    return (channel(16) << 16) | (channel(8) << 8) | channel(0);
   }
 
   drawXpBar() {
     const h = CONFIG.hud;
     const g = this.xpBar;
-    const low = this.run.xp <= CONFIG.xp.lowThreshold;
-
-    this.setXpLow(low);
 
     g.clear();
 
@@ -1062,9 +1094,9 @@ class GameScene extends Phaser.Scene {
     g.fillStyle(CONFIG.colors.cartDark, 1);
     g.fillRect(16, 14, h.xpBarWidth, h.xpBarHeight);
 
-    // Заливка по остатку XP; в момент потери полоса коротко вспыхивает белым
+    // Заливка по остатку XP; в момент потери груза полоса коротко вспыхивает белым
     const flashing = this.time.now < this.xpFlashUntil;
-    g.fillStyle(flashing ? 0xffffff : (low ? CONFIG.colors.danger : CONFIG.colors.booster), 1);
+    g.fillStyle(flashing ? 0xffffff : this.xpBarColor(), 1);
     g.fillRect(16, 14, h.xpBarWidth * this.xpRatio(), h.xpBarHeight);
 
     // Обводка отделяет полосу от фона
