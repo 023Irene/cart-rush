@@ -181,13 +181,16 @@ const CONFIG = {
     boosterDetune: 400     // подбор бустера — deliver.ogg выше обычного
   },
 
-  // Мягкие тени под падающими коробками: показывают, куда именно коробка сядет
-  // по X, и дают ей вес. Чем ближе к своей рельсе, тем тень темнее и шире
+  // Колонка-тень под падающим объектом: полупрозрачная полоса ровно по ширине
+  // коробки, от неё вниз до линии её рельсы. Показывает и точный X посадки,
+  // и остаток пути до рельсы
   shadows: {
-    alphaMin: 0.05,
-    alphaMax: 0.32,
-    widthMin: 0.5,       // доля ширины коробки в самом верху экрана
-    height: 9            // высота эллипса при масштабе 1.0
+    width: 0.9,        // доля ширины коробки: колонка чуть уже её самой
+    alphaTop: 0.05,    // прозрачность у верхнего края — рядом с коробкой
+    alphaBase: 0.26,   // прозрачность у рельсы — в точке посадки
+    steps: 12,         // сегментов в колонке: у Graphics нет градиентной заливки
+    baseHeight: 6,     // высота уплотнённой «пятки» на рельсе при масштабе 1.0
+    maxLength: 0       // потолок длины колонки в px, 0 — без ограничения
   },
 
   // Частицы при сдаче груза
@@ -681,15 +684,33 @@ class GameScene extends Phaser.Scene {
 
     this.fallingBoxes.forEach(box => {
       const railIndex = box.boxData.rail;
-      const y = this.railLineY(railIndex);
+      const railY = this.railLineY(railIndex);
 
-      // Близость: 0 — коробка только появилась вверху, 1 — вот-вот сядет на рельсу
-      const t = Phaser.Math.Clamp(box.y / y, 0, 1);
-      const width = box.displayWidth * (s.widthMin + (1 - s.widthMin) * t);
+      // Колонка начинается у нижней грани коробки и упирается в линию рельсы.
+      // Верх обрезается краем экрана: коробка спавнится выше него
+      let top = Math.max(0, box.y + box.displayHeight / 2);
+      if (s.maxLength > 0) top = Math.max(top, railY - s.maxLength);
+      if (top >= railY) return;              // коробка уже на рельсе — колонка не нужна
 
+      const width = box.displayWidth * s.width;
+      const x = box.x - width / 2;
       const layer = this.shadowLayers[railIndex];
-      layer.fillStyle(0x000000, s.alphaMin + (s.alphaMax - s.alphaMin) * t);
-      layer.fillEllipse(box.x, y, width, s.height * CONFIG.rails[railIndex].scale);
+
+      // У Graphics нет градиентной заливки, поэтому колонка режется на сегменты
+      // с растущей плотностью. Границы округляются: внахлёст два полупрозрачных
+      // прямоугольника дали бы тёмную полосу на стыке, а с зазором — светлый шов
+      for (let i = 0; i < s.steps; i++) {
+        const y0 = Math.round(top + (railY - top) * i / s.steps);
+        const y1 = Math.round(top + (railY - top) * (i + 1) / s.steps);
+        const t = (i + 1) / s.steps;         // 0 у коробки, 1 у рельсы
+        layer.fillStyle(0x000000, s.alphaTop + (s.alphaBase - s.alphaTop) * t);
+        layer.fillRect(x, y0, width, y1 - y0);
+      }
+
+      // Пятка на самой рельсе: точка посадки читается, даже когда колонка короткая
+      const base = s.baseHeight * CONFIG.rails[railIndex].scale;
+      layer.fillStyle(0x000000, s.alphaBase);
+      layer.fillRect(x, railY - base / 2, width, base);
     });
   }
 
