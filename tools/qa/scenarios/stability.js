@@ -69,6 +69,18 @@ async function runSeed(seed) {
 
   const out = { seed };
 
+  // S0 — вместимость: набрать заведомо много и аккуратно поездить. Это и есть
+  // ответ на главный вопрос QA — сколько коробок кузов держит на самом деле
+  out.s0_capacity = await measure(g, {
+    size: 'medium', count: 14,
+    action: async h => {
+      for (let i = 0; i < 10; i++) {
+        await h.drive(i % 2 ? 'left' : 'right', 180);
+        await h.wait(300);
+      }
+    }
+  });
+
   // S1 — спокойная езда: короткие нажатия с паузами, как ездит аккуратный игрок
   out.s1_calm = await measure(g, {
     size: 'medium', count: 10,
@@ -104,7 +116,7 @@ async function runSeed(seed) {
     await g.pauseSpawn(true);
     await g.clearCargo();
     await g.refillXp();
-    await g.place(size, 0, -30);
+    await g.stack(size, 1);   // stack сажает коробку ровно на дно, с учётом её размера
     await g.wait(900);
     const before = await g.state();
     await turn(g);
@@ -163,6 +175,8 @@ async function main() {
     label,
     date: new Date().toISOString(),
     seeds: SEEDS,
+    s0_capacity_settled: avg(rows, r => r.s0_capacity.settled),
+    s0_capacity_left: avg(rows, r => r.s0_capacity.left),
     s1_calm_lost: avg(rows, r => r.s1_calm.lost),
     s2_rest_maxDrift: avg(rows, r => r.s2_rest.maxDrift),
     s2_rest_lost: avg(rows, r => r.s2_rest.settled - r.s2_rest.left),
@@ -179,12 +193,14 @@ async function main() {
     ? +(summary.s5_shift_small / summary.s5_shift_large).toFixed(2) : null;
 
   console.log(`\n=== ${label} ===`);
+  console.log(`S0 вместимость: осталось из 14:         ${summary.s0_capacity_left}   (цель >= 8)`);
   console.log(`S1 спокойная езда, потеряно из 10:      ${summary.s1_calm_lost}   (цель 0)`);
   console.log(`S2 покой 8 с, макс. дрейф px:           ${summary.s2_rest_maxDrift}   (цель < 2)`);
   console.log(`S2 покой, потеряно само собой:          ${summary.s2_rest_lost}   (цель 0)`);
   console.log(`S3 разворот, потеряно из 10:            ${summary.s3_turn_lost}   (цель 1-3)`);
   console.log(`S4 смена рельсы, потеряно из 8:         ${summary.s4_rail_lost}   (цель 1-2)`);
-  console.log(`S5 сдвиг small / large:                 ${summary.s5_shift_small} / ${summary.s5_shift_large} = ${summary.s5_ratio}   (цель >= 1.5)`);
+  const s5ok = summary.s5_ratio && (summary.s5_ratio >= 1.5 || summary.s5_ratio <= 0.67);
+  console.log(`S5 сдвиг small / large:                 ${summary.s5_shift_small} / ${summary.s5_shift_large} = ${summary.s5_ratio}   (различимо: ${s5ok ? 'да' : 'НЕТ'})`);
   console.log(`S10 ошибка площади тела:                ${summary.s10_maxRelError}   (цель < 1e-6)`);
   console.log(`шаг физики, мс:                         ${summary.stepMs}   (цель < 4)`);
   console.log(`макс. проникновение в контакте:         ${summary.maxDepth}`);

@@ -85,16 +85,27 @@ const CONFIG = {
     speedMax: 780,         // px/с после полного разгона
     accelTime: 600,        // мс удержания одной стрелки до максимальной скорости
     switchDuration: 150,   // мс на смену рельсы
-    swayImpulse: 0.9,      // толчок грузу при рывке влево-вправо
-    railImpulse: 2.2       // толчок грузу при смене рельсы
+    swayImpulse: 0.85,      // толчок грузу при рывке влево-вправо, задан для k = 1
+    swayMinK: 0.08,        // ниже этого перепада скорости груз не трогаем: разгон идёт
+                           // покадрово, и без порога штабель получал полсотни
+                           // микротолчков подряд — от них он и разваливался
+    swayPower: 2.8,        // кривая рывка: старт с места мягче, разворот злее
+    swaySpin: 0.04,        // подкрутка на рывке, идёт по той же кривой
+    swayTopFactor: 1.2,    // насколько сильнее сносит верх штабеля: нижние коробки
+                           // прижаты весом остальных, верхняя держится одним трением.
+                           // Считается на 100 px высоты над полом кузова
+    railImpulse: 3.6       // толчок грузу при смене рельсы
   },
 
   // Коробки: размер -> габарит, ценность, штрафы, доля в спавне.
   // penalty — груз вывалился за борт, missPenalty — коробка упала мимо (ADR-0003)
   boxes: {
-    small:  { size: 32, value: 10, penalty: 30,  missPenalty: 5,  weight: 50 },
-    medium: { size: 48, value: 25, penalty: 80,  missPenalty: 10, weight: 35 },
-    large:  { size: 64, value: 50, penalty: 150, missPenalty: 18, weight: 15 }
+    // densityFactor гасит квадратичный рост массы: при одной плотности большая
+    // коробка тяжелее малой вчетверо, а итеративный решатель на таком разбросе
+    // сходится плохо и выдавливает лёгкие тела из штабеля
+    small:  { size: 32, value: 10, penalty: 30,  missPenalty: 5,  weight: 50, densityFactor: 1.5 },
+    medium: { size: 48, value: 25, penalty: 80,  missPenalty: 10, weight: 35, densityFactor: 1.1 },
+    large:  { size: 64, value: 50, penalty: 150, missPenalty: 18, weight: 15, densityFactor: 0.9 }
   },
 
   // Падение и темп (GAME_SPEC.md, раздел 5.3)
@@ -203,11 +214,39 @@ const CONFIG = {
 
   // Физика груза
   physics: {
-    gravityY: 1,
-    boxFriction: 0.35,
+    gravityY: 1,               // спека 5.5 фиксирует 1.0
+
+    // Решатель. Дефолты Matter (6/4) рассчитаны на пару тел: штабель из 8-10
+    // разнокалиберных коробок за шесть проходов не сходится, и остаточное
+    // проникновение на следующем шаге выдавливает соседа вбок
+    positionIterations: 12,
+    velocityIterations: 8,
+
+    // Материал коробок. В паре Matter берёт min(friction) и max(frictionStatic,
+    // restitution, slop). У тележки friction равен 1 не по нашей воле: Matter
+    // принудительно ставит статичному телу friction 1 и restitution 0 —
+    // поэтому трение контакта «коробка-дно» задаётся здесь, а не там
+    boxFriction: 0.45,
+    boxFrictionStatic: 1.0,    // порог срыва покоя: лежащий штабель не трогается
+                               // с места от слабого воздействия, но после срыва
+                               // трение обычное. Ровно граница «езда / рывок»
     boxFrictionAir: 0.01,
-    boxRestitution: 0.05,
-    boxDensity: 0.002
+    boxRestitution: 0.02,      // приземлившаяся коробка не подпрыгивает, а садится
+    boxDensity: 0.002,         // база; каждый размер домножает своим densityFactor
+    contactSlop: 0.3,          // проникновение меньше 0.3 px решатель не правит:
+                               // именно эта борьба даёт микродрожь стопки
+
+    // Импульсы в CONFIG заданы для средней коробки; остальные размеры получают
+    // своё по массе. setVelocity массу игнорирует, поэтому без этого множителя
+    // малая и большая коробки летели бы одинаково — размер бы не читался
+    massRefSize: 'medium',
+    massInfluence: 0.75,       // 0 — масса не влияет, 1 — честное dv = J / m
+    massFactorMin: 0.5,
+    massFactorMax: 2.0,
+
+    // Потолок скорости в момент, когда коробка становится грузом. К концу забега
+    // она падает втрое быстрее, чем в начале, и вбивает штабель внутрь себя
+    catchMaxSpeed: 5.0
   },
 
   // Границы, за которыми объект считается потерянным.
@@ -752,15 +791,23 @@ class GameScene extends Phaser.Scene {
     const wh = this.upgrades.wallHeight * s;   // высота бортов растёт от улучшения
     const wt = c.wallThickness * s;
 
-    // Дно и два борта. Перегородки в середине нет: кузов единый
-    const floor = this.matter.bodies.rectangle(x, bedY + ft / 2, w, ft);
-    const leftWall = this.matter.bodies.rectangle(x - w / 2 + wt / 2, bedY - wh / 2, wt, wh);
-    const rightWall = this.matter.bodies.rectangle(x + w / 2 - wt / 2, bedY - wh / 2, wt, wh);
+    // Дно и два борта. Перегородки в середине нет: кузов единый.
+    //
+    // Материал задаётся КАЖДОЙ части: столкновения составного тела Matter считает
+    // по частям, и свойство на родителе до контакта не доходит. friction здесь не
+    // задаём намеренно — Body.setStatic всё равно перезапишет его на 1 (и
+    // restitution на 0), а вот frictionStatic и slop он не трогает
+    const surface = {
+      frictionStatic: CONFIG.physics.boxFrictionStatic,
+      slop: CONFIG.physics.contactSlop
+    };
+    const floor = this.matter.bodies.rectangle(x, bedY + ft / 2, w, ft, surface);
+    const leftWall = this.matter.bodies.rectangle(x - w / 2 + wt / 2, bedY - wh / 2, wt, wh, surface);
+    const rightWall = this.matter.bodies.rectangle(x + w / 2 - wt / 2, bedY - wh / 2, wt, wh, surface);
 
     this.cartBody = this.matter.body.create({
       parts: [floor, leftWall, rightWall],
       isStatic: true,
-      friction: 0.6,
       label: 'cart'
     });
 
@@ -897,19 +944,59 @@ class GameScene extends Phaser.Scene {
 
   // Груз кренится в сторону, обратную рывку: высокий штабель может развалиться.
   // Это и есть ограничитель забега — физика вместо лимита вместимости.
+  //
+  // Порог swayMinK обязателен. Разгон меняет скорость КАЖДЫЙ кадр в течение
+  // accelTime, поэтому dvx ≠ 0 полсотни кадров подряд: без порога штабель получал
+  // столько же толчков и столько же случайных подкруток, причём подкрутка не
+  // зависела от силы рывка вовсе. Отсюда и брались «5-6 коробок и кузов не удержать»
   swayCargo(dvx) {
     if (this.cargo.length === 0) return;
-    const k = Math.abs(dvx) / CONFIG.cart.speedMax;   // 1 — старт или стоп, 2 — разворот
-    const push = -Math.sign(dvx) * CONFIG.cart.swayImpulse * k;
+    const c = CONFIG.cart;
+    const k = Math.abs(dvx) / c.speedMax;   // 1 — старт или стоп, 2 — разворот
+    if (k < c.swayMinK) return;
+
+    // Нелинейность разводит спокойную езду и рывок: старт с места даёт меньше,
+    // разворот на полном ходу — заметно больше. Манёвр обязан рисковать грузом
+    const force = Math.pow(k, c.swayPower);
+    const push = -Math.sign(dvx) * c.swayImpulse * force;
+
+    const ref = this.refMass();
 
     this.cargo.forEach(box => {
+      const gain = this.topFactor(box) * this.massFactor(box, ref);
       this.matter.body.setVelocity(box.body, {
-        x: box.body.velocity.x + push,
+        x: box.body.velocity.x + push * gain,
         y: box.body.velocity.y
       });
-      this.matter.body.setAngularVelocity(
-        box.body, box.body.angularVelocity + Phaser.Math.FloatBetween(-0.03, 0.03));
+      this.matter.body.setAngularVelocity(box.body, box.body.angularVelocity +
+        Phaser.Math.FloatBetween(-c.swaySpin, c.swaySpin) * force * gain);
     });
+  }
+
+  // Опорная масса — средняя коробка на текущей рельсе: импульсы в CONFIG заданы
+  // для неё. Масштаб рельсы входит в квадрате, иначе на дальней рельсе всё было
+  // бы легче и любой толчок сильнее
+  refMass() {
+    const p = CONFIG.physics;
+    const spec = CONFIG.boxes[p.massRefSize];
+    const s = this.cart.scale;
+    return spec.size * spec.size * s * s * p.boxDensity * spec.densityFactor;
+  }
+
+  // Лёгкую коробку сносит сильнее, тяжёлую качает. massInfluence — рубильник:
+  // 0 возвращает прежнее поведение, 1 даёт честное dv = J / m
+  massFactor(box, ref) {
+    const p = CONFIG.physics;
+    return Phaser.Math.Clamp(
+      Math.pow(ref / box.body.mass, p.massInfluence), p.massFactorMin, p.massFactorMax);
+  }
+
+  // Чем выше коробка лежит в кузове, тем сильнее её сносит: низ прижат весом
+  // штабеля, верх держится одним трением. Именно поэтому резкий манёвр срывает
+  // верхушку, а не разваливает груз целиком — и поэтому высокий штабель рискован
+  topFactor(box) {
+    const height = Math.max(0, this.cart.y - box.y);
+    return 1 + CONFIG.cart.swayTopFactor * height / (100 * this.cart.scale);
   }
 
   // Двигает тележку и весь груз на одну и ту же дельту
@@ -1002,11 +1089,14 @@ class GameScene extends Phaser.Scene {
     const margin = sizePx * rail.scale / 2 + 8;
     const x = Phaser.Math.Between(margin, CONFIG.screen.width - margin);
 
+    const p = CONFIG.physics;
     const obj = this.matter.add.image(x, -sizePx, texture, null, {
-      friction: CONFIG.physics.boxFriction,
-      frictionAir: CONFIG.physics.boxFrictionAir,
-      restitution: CONFIG.physics.boxRestitution,
-      density: CONFIG.physics.boxDensity
+      friction: p.boxFriction,
+      frictionStatic: p.boxFrictionStatic,
+      frictionAir: p.boxFrictionAir,
+      restitution: p.boxRestitution,
+      slop: p.contactSlop,
+      density: p.boxDensity * (data.densityFactor || 1)
     });
 
     // setScale у Matter-объекта Phaser масштабирует и картинку, и тело
@@ -1038,6 +1128,7 @@ class GameScene extends Phaser.Scene {
     this.spawnFaller(`box-${sizeName}-${rail.color}`, spec.size, railIndex, {
       kind: 'box',
       sizeName,
+      densityFactor: spec.densityFactor,
       color: rail.color,
       value: spec.value,
       penalty: spec.penalty,
@@ -1163,6 +1254,14 @@ class GameScene extends Phaser.Scene {
     box.boxData.state = 'cargo';
     box.setIgnoreGravity(false);
     this.applyFilter(box.body, CAT.cart[this.cart.rail], cartMask(this.cart.rail));
+
+    // За забег скорость падения растёт втрое, а энергия удара по штабелю — в семь
+    // раз, ровно к тому моменту, когда штабель высокий. Режем только позднюю
+    // эскалацию: до 300 px/с коробка садится ровно так же, как раньше
+    const cap = CONFIG.physics.catchMaxSpeed;
+    if (box.body.velocity.y > cap) {
+      this.matter.body.setVelocity(box.body, { x: box.body.velocity.x, y: cap });
+    }
 
     this.fallingBoxes = this.fallingBoxes.filter(b => b !== box);
     this.cargo.push(box);
@@ -1795,6 +1894,8 @@ const gameConfig = {
     default: 'matter',
     matter: {
       gravity: { x: 0, y: CONFIG.physics.gravityY },
+      positionIterations: CONFIG.physics.positionIterations,
+      velocityIterations: CONFIG.physics.velocityIterations,
       debug: CONFIG.debug
     }
   },
