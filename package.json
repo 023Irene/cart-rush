@@ -1,0 +1,13 @@
+{
+  "name": "cart-rush",
+  "version": "0.6.0",
+  "private": true,
+  "description": "Cart Rush — аркада-catcher на Phaser 4. npm нужен только для QA-оснастки: сама игра грузит Phaser с CDN и зависимостей не имеет (ADR-0004).",
+  "scripts": {
+    "qa": "node tools/qa/run.js",
+    "qa:smoke": "node tools/qa/scenarios/smoke.js"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^24.0.0"
+  }
+}
