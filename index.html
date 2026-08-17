@@ -126,8 +126,18 @@ const CONFIG = {
     afterMs: 30000,      // с какой секунды забега начинают попадаться
     chance: 0.12,        // доля спавнов, где вместо коробки прилетает бомба
     penalty: 100,        // XP за пойманную бомбу
-    blastImpulse: 12,    // толчок грузу: разлетевшийся штабель — основное наказание.
-                         // Меньше 9 груз не перелетает борт в 34 px и просто подпрыгивает
+    // Взрыв радиальный: направление считается от точки взрыва, сила падает с
+    // расстоянием и делится на массу коробки. Сколько коробок улетит за борт —
+    // решает воздействие, а не константа в конфиге
+    blastImpulse: 20,    // px за шаг для средней коробки в эпицентре. Меньше 9 груз
+                         // не перелетает борт в 34 px и просто подпрыгивает
+    blastRadius: 240,    // px при масштабе 1.0: перекрывает полукузов и штабель.
+                         // Дальше радиуса коробка не получает ничего
+    blastMin: 0.25,      // множитель силы у самой границы радиуса
+    blastUp: 0.7,        // подмешанный вверх вектор: бомба ловится верхней коробкой,
+                         // и чистый радиальный разлёт вбивал бы нижний слой в дно
+    blastMinUp: 0.35,    // вниз не толкаем никогда: 12 px за шаг пробили бы пол насквозь
+    blastSpin: 0.2,      // подкрутка в эпицентре, гаснет вместе с силой
     blastParticles: 5,   // множитель выброса частиц, как у сдачи груза
     shakeMs: 260         // тряска дольше, чем при потере одной коробки (120 мс)
   },
@@ -1215,14 +1225,7 @@ class GameScene extends Phaser.Scene {
 
     this.consumeFaller(bomb, 'exploded');
 
-    const impulse = b.blastImpulse;
-    this.cargo.forEach(box => {
-      this.matter.body.setVelocity(box.body, {
-        x: Phaser.Math.FloatBetween(-impulse, impulse),
-        y: -Math.abs(Phaser.Math.FloatBetween(impulse * 0.4, impulse))
-      });
-      this.matter.body.setAngularVelocity(box.body, Phaser.Math.FloatBetween(-0.2, 0.2));
-    });
+    this.blastCargo(x, y);
 
     // Взрыв — тот же error.ogg, но сильно ниже и оттого длиннее и глуше.
     // Отдельного сэмпла в assets/audio/ пока нет
@@ -1283,6 +1286,42 @@ class GameScene extends Phaser.Scene {
     playSfx(this, 'catch', {
       volume: a.catchVolume,
       detune: step * a.catchStep + Phaser.Math.Between(-a.catchJitter, a.catchJitter)
+    });
+  }
+
+  // Радиальный разлёт от точки взрыва. Три множителя, у каждого свой смысл:
+  // расстояние (дальняя коробка почти не сдвинется), масса (лёгкую сносит, тяжёлую
+  // качает) и постоянная добавка вверх. Числа коробок здесь нет намеренно: сколько
+  // улетит за борт, решает checkCargoOverboard в следующих кадрах
+  blastCargo(bx, by) {
+    const b = CONFIG.bombs;
+    const ref = this.refMass();
+    const radius = b.blastRadius * this.cart.scale;   // радиус — длина, масштаб обязателен
+
+    this.cargo.forEach(box => {
+      const dx = box.x - bx;
+      const dy = box.y - by;
+      const dist = Math.hypot(dx, dy);
+      if (dist > radius) return;                      // за радиусом коробка остаётся на месте
+
+      // Затухание линейное с полом. Обратный квадрат не даёт границы вовсе, и
+      // «сколько улетит» перестало бы зависеть от того, где поймана бомба
+      const falloff = b.blastMin + (1 - b.blastMin) * (1 - dist / radius);
+
+      // Коробка ровно в эпицентре направления не имеет — её просто подбрасывает
+      let nx = dist > 1 ? dx / dist : Phaser.Math.FloatBetween(-0.5, 0.5);
+      let ny = dist > 1 ? dy / dist : 0;
+
+      ny = Math.min(ny - b.blastUp, -b.blastMinUp);   // вниз — никогда
+      const len = Math.hypot(nx, ny) || 1;
+      nx /= len;
+      ny /= len;
+
+      const speed = b.blastImpulse * falloff * this.massFactor(box, ref);
+
+      this.matter.body.setVelocity(box.body, { x: nx * speed, y: ny * speed });
+      this.matter.body.setAngularVelocity(box.body,
+        Phaser.Math.FloatBetween(-b.blastSpin, b.blastSpin) * falloff);
     });
   }
 
