@@ -91,10 +91,17 @@ const CONFIG = {
                            // микротолчков подряд — от них он и разваливался
     swayPower: 2.8,        // кривая рывка: старт с места мягче, разворот злее
     swaySpin: 0.04,        // подкрутка на рывке, идёт по той же кривой
+    railScalePower: 3,     // степень, в которой масштаб рельсы гасит импульсы груза.
+                           // 1 (просто масштаб) мало: сзади борт и порог вылета ниже,
+                           // и тот же разворот выносил там 3.6 коробки против 0.4
+                           // спереди. Замер подобрал 3
     swayTopFactor: 0.8,    // насколько сильнее сносит верх штабеля: нижние коробки
                            // прижаты весом остальных, верхняя держится одним трением.
                            // Считается на 100 px высоты над полом кузова
-    railImpulse: 3.0       // толчок грузу при смене рельсы
+    railImpulse: 1.8       // толчок грузу при смене рельсы. Выше рывка его держать
+                           // нельзя: смена рельсы — не лихачество, а обязательное
+                           // действие (коробки падают 50/50), и дорогой переезд
+                           // превращает выбор «копить или сдать» в «копить или ловить»
   },
 
   // Коробки: размер -> габарит, ценность, штрафы, доля в спавне.
@@ -969,7 +976,7 @@ class GameScene extends Phaser.Scene {
     // Нелинейность разводит спокойную езду и рывок: старт с места даёт меньше,
     // разворот на полном ходу — заметно больше. Манёвр обязан рисковать грузом
     const force = Math.pow(k, c.swayPower);
-    const push = -Math.sign(dvx) * c.swayImpulse * force;
+    const push = -Math.sign(dvx) * c.swayImpulse * force * this.impulseScale();
 
     const ref = this.refMass();
 
@@ -1010,6 +1017,17 @@ class GameScene extends Phaser.Scene {
     return 1 + CONFIG.cart.swayTopFactor * height / (100 * this.cart.scale);
   }
 
+  // Импульсы груза заданы для передней рельсы. На задней и борта, и порог вылета
+  // за борт уменьшены в 0.82 — значит и толчок обязан уменьшиться так же. Без
+  // этого один и тот же разворот сзади выносил полкузова, а спереди почти ничего
+  impulseScale() {
+    // Квадрат, а не сам масштаб. Импульс задаётся как скорость, и дальность
+    // разлёта идёт как её квадрат, а вот борт и порог вылета уменьшаются линейно.
+    // Замер подтвердил: при линейном гашении разворот сзади терял 3.6 коробки
+    // против 0.4 спереди
+    return Math.pow(this.cart.scale, CONFIG.cart.railScalePower);
+  }
+
   // Двигает тележку и весь груз на одну и ту же дельту
   moveCartBy(dx, dy) {
     if (dx === 0 && dy === 0) return;
@@ -1035,13 +1053,18 @@ class GameScene extends Phaser.Scene {
 
     // Груз получает толчок: резкий манёвр всегда рискует штабелем.
     // Мягкая подвеска из магазина этот толчок гасит
-    const impulse = this.upgrades.railImpulse;
+    // Масса и масштаб рельсы — те же множители, что у рывка и у взрыва: один
+    // набор правил на все три воздействия, иначе они разъедутся при первой правке
+    const impulse = this.upgrades.railImpulse * this.impulseScale();
+    const ref = this.refMass();
+
     this.cargo.forEach(box => {
+      const m = this.massFactor(box, ref);
       this.matter.body.setVelocity(box.body, {
-        x: Phaser.Math.FloatBetween(-impulse, impulse),
-        y: box.body.velocity.y - impulse * 0.4
+        x: Phaser.Math.FloatBetween(-impulse, impulse) * m,
+        y: box.body.velocity.y - impulse * 0.4 * m
       });
-      this.matter.body.setAngularVelocity(box.body, Phaser.Math.FloatBetween(-0.08, 0.08));
+      this.matter.body.setAngularVelocity(box.body, Phaser.Math.FloatBetween(-0.08, 0.08) * m);
     });
 
     // Груз меняет масштаб вместе с тележкой. Равномерное масштабирование
@@ -1318,7 +1341,7 @@ class GameScene extends Phaser.Scene {
       nx /= len;
       ny /= len;
 
-      const speed = b.blastImpulse * falloff * this.massFactor(box, ref);
+      const speed = b.blastImpulse * falloff * this.massFactor(box, ref) * this.impulseScale();
 
       this.matter.body.setVelocity(box.body, { x: nx * speed, y: ny * speed });
       this.matter.body.setAngularVelocity(box.body,

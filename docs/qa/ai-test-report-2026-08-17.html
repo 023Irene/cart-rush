@@ -1,0 +1,455 @@
+<title>Отчёт AI-тестирования</title>
+
+<style>
+  :root {
+    --ground: #eceef1; --surface: #f7f8fa; --raised: #ffffff; --line: #cfd4da;
+    --text: #1c1f23; --dim: #5d646d; --faint: #878e97;
+    --blue: #2f62b4; --blue-solid: #3d7ad6; --yellow: #8d6210; --yellow-solid: #e8b33a;
+    --danger: #b93a3a; --danger-solid: #d64545; --green: #3f8f57; --green-solid: #5fbf7a;
+    --cart: #7a7f87;
+    --crit: #8e2020; --high: #b93a3a; --med: #8d6210; --low: #5d646d;
+    --shadow: 0 1px 2px rgba(20,24,28,.08), 0 8px 24px rgba(20,24,28,.06);
+    --grid: rgba(28,31,35,.05);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #1a1d21; --surface: #24272c; --raised: #2b2e33; --line: #3a3e45;
+      --text: #e8eaed; --dim: #9aa0a8; --faint: #6f767f;
+      --blue: #6b9dea; --blue-solid: #3d7ad6; --yellow: #e8b33a; --yellow-solid: #e8b33a;
+      --danger: #e06060; --danger-solid: #d64545; --green: #5fbf7a; --green-solid: #5fbf7a;
+      --cart: #8b9099;
+      --crit: #ff7b7b; --high: #e06060; --med: #e8b33a; --low: #9aa0a8;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.3);
+      --grid: rgba(232,234,237,.045);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #1a1d21; --surface: #24272c; --raised: #2b2e33; --line: #3a3e45;
+    --text: #e8eaed; --dim: #9aa0a8; --faint: #6f767f;
+    --blue: #6b9dea; --blue-solid: #3d7ad6; --yellow: #e8b33a; --yellow-solid: #e8b33a;
+    --danger: #e06060; --danger-solid: #d64545; --green: #5fbf7a; --green-solid: #5fbf7a;
+    --cart: #8b9099;
+    --crit: #ff7b7b; --high: #e06060; --med: #e8b33a; --low: #9aa0a8;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.3);
+    --grid: rgba(232,234,237,.045);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0; background: var(--ground);
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px),
+                      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 32px 32px;
+    color: var(--text);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size: 16px; line-height: 1.6;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 48px 24px 96px; }
+
+  h1, h2, h3 {
+    font-family: Bahnschrift, "DIN Alternate", "Segoe UI Semibold", "Segoe UI", sans-serif;
+    font-weight: 600; text-wrap: balance; letter-spacing: .01em;
+  }
+  code, .mono, .num { font-family: "Cascadia Mono", Consolas, ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+  code { background: var(--surface); padding: 1px 5px; border-radius: 3px; font-size: .92em; }
+
+  header { border-bottom: 2px solid var(--text); padding-bottom: 20px; }
+  .eyebrow {
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--faint); margin: 0 0 10px;
+  }
+  h1 { font-size: clamp(34px, 6vw, 54px); line-height: 1.05; margin: 0 0 12px; }
+  .lede { font-size: 18px; color: var(--dim); max-width: 64ch; margin: 0; }
+  .meta {
+    display: flex; flex-wrap: wrap; gap: 8px 28px; font-size: 13px; color: var(--faint);
+    margin: 20px 0 0; font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+  }
+
+  .rail { height: 6px; border-radius: 3px; margin: 56px 0 28px; position: relative; }
+  .rail::after {
+    content: ""; position: absolute; inset: 0; border-radius: 3px;
+    background: repeating-linear-gradient(90deg, transparent 0 18px, rgba(0,0,0,.28) 18px 26px);
+  }
+  .rail-danger { background: var(--danger-solid); }
+  .rail-yellow { background: var(--yellow-solid); }
+  .rail-grey { background: var(--cart); }
+  .rail-green { background: var(--green-solid); }
+
+  h2 { font-size: 27px; margin: 0 0 6px; }
+  h3 { font-size: 19px; margin: 0; }
+  .section-note { color: var(--dim); margin: 0 0 26px; max-width: 68ch; }
+
+  /* ---------- сводка ---------- */
+  .tally { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 10px; }
+  .tally div {
+    background: var(--raised); border: 1px solid var(--line); border-radius: 6px;
+    padding: 14px 16px; border-left: 4px solid var(--line);
+  }
+  .tally .n { font-family: Bahnschrift, "Segoe UI", sans-serif; font-size: 34px; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .tally .l {
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint);
+  }
+  .t-crit { border-left-color: var(--crit) !important; }
+  .t-high { border-left-color: var(--high) !important; }
+  .t-med { border-left-color: var(--med) !important; }
+  .t-low { border-left-color: var(--low) !important; }
+  .t-crit .n { color: var(--crit); }
+  .t-high .n { color: var(--high); }
+  .t-med .n { color: var(--med); }
+
+  /* ---------- находки ---------- */
+  .find {
+    background: var(--raised); border: 1px solid var(--line); border-left: 4px solid var(--line);
+    border-radius: 6px; box-shadow: var(--shadow); margin-bottom: 18px; overflow: hidden;
+  }
+  .find.high { border-left-color: var(--high); }
+  .find.med { border-left-color: var(--med); }
+  .find.low { border-left-color: var(--low); }
+
+  .find-head {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px;
+    padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--surface);
+  }
+  .sev {
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+    padding: 3px 9px; border-radius: 3px; border: 1px solid; white-space: nowrap;
+  }
+  .sev-high { color: var(--high); border-color: color-mix(in srgb, var(--high) 45%, transparent); }
+  .sev-med { color: var(--med); border-color: color-mix(in srgb, var(--med) 45%, transparent); }
+  .sev-low { color: var(--low); border-color: var(--line); }
+  .src {
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    font-size: 11px; color: var(--faint); letter-spacing: .06em; margin-left: auto;
+  }
+  .fixed {
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--green); border: 1px solid color-mix(in srgb, var(--green) 45%, transparent);
+    padding: 3px 9px; border-radius: 3px;
+  }
+
+  .find dl { margin: 0; padding: 16px 20px 18px; display: grid; grid-template-columns: max-content 1fr; gap: 8px 20px; }
+  .find dt {
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: var(--faint); padding-top: 4px;
+  }
+  .find dd { margin: 0; }
+  @media (max-width: 640px) {
+    .find dl { grid-template-columns: 1fr; gap: 2px 0; }
+    .find dd { margin-bottom: 10px; }
+  }
+
+  .note {
+    border-left: 3px solid var(--blue-solid); background: var(--surface);
+    padding: 14px 18px; border-radius: 0 5px 5px 0; margin: 22px 0 0; color: var(--dim);
+  }
+  .note strong { color: var(--text); }
+  .note-warn { border-left-color: var(--yellow-solid); }
+  .note-green { border-left-color: var(--green-solid); }
+
+  .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--raised); }
+  table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: 14px; }
+  th, td { padding: 11px 16px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+  thead th {
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace; font-weight: 400;
+    font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); background: var(--surface);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.num, th.num { text-align: right; font-family: "Cascadia Mono", Consolas, ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+  .good { color: var(--green); }
+  .bad { color: var(--danger); }
+
+  ul.plain { padding-left: 20px; margin: 0; }
+  ul.plain li { margin-bottom: 8px; }
+
+  footer {
+    margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line);
+    font-size: 13px; color: var(--faint); font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+  }
+  a { color: var(--blue); }
+  a:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Cart Rush · пункт 8 QA-документа · 17.08.2026</p>
+    <h1>Отчёт AI-тестирования</h1>
+    <p class="lede">Три независимых агента прогнали игру в настоящем Chrome: физика, экономика,
+      игровой цикл. Около двадцати забегов и двухсот отдельных замеров. Ни одной находки
+      уровня Critical; две High уже исправлены и перемерены, четыре ждут решения.</p>
+    <div class="meta">
+      <span>Агенты: physics · economy · gameplay</span>
+      <span>Оснастка: tools/qa (ADR-0004)</span>
+      <span>Ошибок в консоли за все прогоны: 0</span>
+    </div>
+  </header>
+
+  <div class="rail rail-danger"></div>
+  <h2>Сводка</h2>
+  <p class="section-note">Градация та же, что задал QA-документ. «Исправлено» означает: правка
+    внесена, замер повторён и порог достигнут — а не «мы посмотрели и вроде лучше».</p>
+
+  <div class="tally">
+    <div class="t-crit"><div class="n">0</div><div class="l">Critical</div></div>
+    <div class="t-high"><div class="n">6</div><div class="l">High · 2 исправлено</div></div>
+    <div class="t-med"><div class="n">9</div><div class="l">Medium</div></div>
+    <div class="t-low"><div class="n">6</div><div class="l">Low</div></div>
+  </div>
+
+  <div class="note note-green">
+    <strong>Главное, ради чего всё затевалось, работает.</strong> Жалоба QA «больше 5–6 коробок
+    не удержать» закрыта: замер до правок — спокойная езда теряла 5.8 коробки из 10; после —
+    0 потерь, а из 14 коробок в кузове остаётся 13. Взрыв бомбы стал физическим событием:
+    2.4 коробки из 5, направление читается по знаку скорости груза, высокие борта режут потери
+    вдвое.
+  </div>
+
+  <div class="rail rail-danger"></div>
+  <h2>High — шесть находок</h2>
+  <p class="section-note">Механика работает не так, как задумано спекой. Две исправлены прямо
+    в этом заходе, потому что имели конкретный рычаг и подтверждались повторным замером.</p>
+
+  <article class="find high">
+    <div class="find-head">
+      <span class="sev sev-high">High</span>
+      <h3>Ядро «копить или сдать» было сломано сменой рельсы</h3>
+      <span class="fixed">Исправлено</span>
+      <span class="src">gameplay</span>
+    </div>
+    <dl>
+      <dt>Проблема</dt><dd>Сдача по 4 коробки доминировала по всем осям: 11 000 очков за забег против 2 760 у сдачи по 12, забег втрое длиннее. Выбор был не «копить или сдать», а «копить или ловить».</dd>
+      <dt>Сценарий</dt><dd>Забеги ботом со стилями <code>unloadAt</code> 4, 8, 12, сиды 101 и 303.</dd>
+      <dt>Частота</dt><dd>Все 7 забегов.</dd>
+      <dt>Причина</dt><dd><code>railImpulse</code> 3.0 против <code>swayImpulse</code> 0.7 — смена рельсы била по грузу вчетверо сильнее разворота. А менять рельсу приходится 23 раза в минуту: коробки падают 50/50, иначе не поймать ничего. До сдачи доезжало 92 % груза при штабеле 4 и лишь 40 % при 12.</dd>
+      <dt>Правка</dt><dd><code>railImpulse</code> 3.0 → 1.8, плюс импульс смены рельсы теперь делится на массу коробки, как рывок и взрыв. Смена рельсы — обязательное действие, а не лихачество, и дороже разворота стоить не должна.</dd>
+      <dt>Замер после</dt><dd>Смена рельсы с 8 коробками теряет 0.8 против прежних 1.4.</dd>
+    </dl>
+  </article>
+
+  <article class="find high">
+    <div class="find-head">
+      <span class="sev sev-high">High</span>
+      <h3>Разворот на задней рельсе выносил половину кузова</h3>
+      <span class="fixed">Исправлено</span>
+      <span class="src">physics</span>
+    </div>
+    <dl>
+      <dt>Проблема</dt><dd>Один и тот же манёвр на дальней рельсе стоил в 12 раз дороже, чем на ближней, по принципу «всё или ничего».</dd>
+      <dt>Сценарий</dt><dd>12 medium в кузове, разгон 700 мс и разворот. Передняя рельса против задней, 3 сида.</dd>
+      <dt>Частота</dt><dd>3 из 3 сидов; потери 6 / 0 / 6 из 12 сзади против 1 / 0 / 0 спереди.</dd>
+      <dt>Причина</dt><dd>Импульсы задавались абсолютными, а борта и порог вылета за борт масштабируются вместе с рельсой (0.82). Толчок оставался прежним, а «улететь» стало ближе.</dd>
+      <dt>Правка</dt><dd>Новый множитель <code>impulseScale()</code> — масштаб рельсы в степени <code>railScalePower: 3</code>. Степень подобрана замером: линейного гашения не хватило совсем (3.6 против 0.4), шестая степень убрала риск вовсе.</dd>
+      <dt>Замер после</dt><dd>Разворот на задней рельсе теряет 1.6 из 10 — в целевом коридоре 1–3.</dd>
+    </dl>
+  </article>
+
+  <article class="find high">
+    <div class="find-head">
+      <span class="sev sev-high">High</span>
+      <h3>Смешанный штабель разваливается сам, без единого нажатия</h3>
+      <span class="src">physics</span>
+    </div>
+    <dl>
+      <dt>Проблема</dt><dd>Стопка из коробок разного размера продолжает сползать после оседания и роняет груз, пока игрок стоит на месте.</dd>
+      <dt>Сценарий</dt><dd><code>agent-rest.js mix12</code>: 12 коробок в пропорциях спавна (50/35/15), затем 12 секунд без ввода. Контроль — те же 12, но все medium.</dd>
+      <dt>Частота</dt><dd>3 из 3 сидов теряют 1, 1 и 3 коробки. Контроль на одном размере — 0 из 3, дрейф ровно 0.00 px. Эффект держится и когда штабель набран честной ловлей.</dd>
+      <dt>Ожидаемое</dt><dd>В покое дрейф меньше 2 px и ноль потерь.</dd>
+      <dt>Фактическое</dt><dd>Дрейф до 12.59 px, отдельные коробки уползают на 43 px. Распад идёт в окне 1.5–6 с и затухает; скорости 0–2.85 px за шаг — это сползание по трению, а не выброс решателем.</dd>
+      <dt>Предложение</dt><dd><code>boxFriction</code> 0.45 → 0.6 (<code>boxFrictionStatic</code> уже на потолке 1.0). Обязательно перемерить <code>stability.js</code>: рост трения снижает потери в манёврах, а они и так ниже нормы.</dd>
+    </dl>
+  </article>
+
+  <article class="find high">
+    <div class="find-head">
+      <span class="sev sev-high">High</span>
+      <h3>Разворот на передней рельсе почти не рискует грузом</h3>
+      <span class="src">physics</span>
+    </div>
+    <dl>
+      <dt>Проблема</dt><dd>Главный ограничитель забега — риск манёвра — на ближней рельсе не работает вплоть до 14 коробок.</dd>
+      <dt>Сценарий</dt><dd>12 medium, разгон вправо 700 мс и сразу разворот влево.</dd>
+      <dt>Частота</dt><dd>8 сидов подряд ниже порога: 0.33 из 12 у агента, 0–0.4 из 10 в моих замерах при цели 1–3.</dd>
+      <dt>Ожидаемое</dt><dd>Спека: вместимости у тележки нет, ограничение держит физика. Копить должно быть страшно.</dd>
+      <dt>Предложение</dt><dd>Не трогать до живого плейтеста. Усиливать рывок сейчас опасно: в полном забеге бот и так терял 12–16 коробок, а после правки смены рельсы соотношение сдвинулось. Сначала руки, потом числа.</dd>
+    </dl>
+  </article>
+
+  <article class="find high">
+    <div class="find-head">
+      <span class="sev sev-high">High</span>
+      <h3>Сдача по 14 коробок даёт ровно ноль очков</h3>
+      <span class="src">economy</span>
+    </div>
+    <dl>
+      <dt>Проблема</dt><dd>Кузов статически держит 14, но в живом забеге до такого штабеля не доживают: игрок сжигает весь XP раньше, чем накопит, и уходит на Game Over со счётом 0.</dd>
+      <dt>Сценарий</dt><dd>Бот со стилем <code>unloadAt: 14</code>, сиды 101 и 202.</dd>
+      <dt>Частота</dt><dd>2 из 2 забегов: счёт 0, забег 33–35 с, ни одной сдачи, потеряно за борт 11–13 коробок.</dd>
+      <dt>Ожидаемое</dt><dd>Спека 5.4: множитель — это и есть размер сдачи, роста он не ограничивает.</dd>
+      <dt>Фактическое</dt><dd>Динамический потолок около 8–10 коробок. Новичок, решивший «накоплю побольше», получает пустой экран поражения и не понимает, что сделал не так.</dd>
+      <dt>Предложение</dt><dd>Либо признать потолок в спеке и подсказать его игроку (ярлык цены меняет цвет на опасный после 10), либо снизить штраф за потерю при большом штабеле. Решение дизайнерское, требует плейтеста.</dd>
+    </dl>
+  </article>
+
+  <article class="find high">
+    <div class="find-head">
+      <span class="sev sev-high">High</span>
+      <h3>Заложенные спекой 2.5–4.5 минуты даёт только самый осторожный стиль</h3>
+      <span class="src">gameplay · economy</span>
+    </div>
+    <dl>
+      <dt>Проблема</dt><dd>Длина забега зависит от стиля вчетверо и в обе стороны выходит за коридор спеки.</dd>
+      <dt>Сценарий</dt><dd>Стили <code>unloadAt</code> 3, 4, 8, 12, 14.</dd>
+      <dt>Частота</dt><dd>Все прогоны. Сдача по 3–4 — 141–176 с (и упирается в потолок замера, то есть на деле дольше); естественное «накоплю восемь» — 62–67 с; сдача по 14 — 33 с.</dd>
+      <dt>Ожидаемое</dt><dd>Раздел 5.1: 2.5 минуты при доле промахов 50 % и 4.5 при 20 %.</dd>
+      <dt>Фактическое</dt><dd>Забег кончают потери груза (69–91 % утечки XP), а не промахи, как закладывала спека.</dd>
+      <dt>Предложение</dt><dd>Пересмотреть модель раздела 5.1 по факту: она писалась до того, как груз стал физическим. Числа <code>CONFIG</code> не трогать до плейтеста.</dd>
+    </dl>
+  </article>
+
+  <div class="rail rail-yellow"></div>
+  <h2>Medium — девять находок</h2>
+  <p class="section-note">Портят ощущение или искажают замеры, но игра держится.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Находка</th><th>Числа</th><th>Что делать</th><th class="num">Агент</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Пауза спавна снимается сама через 15 с</strong> — <code>rampDifficulty()</code> зовёт <code>spawnTimer.reset()</code> без <code>paused</code></td>
+          <td>3 сида из 3, ровно на <code>rampEvery</code></td>
+          <td>На игру не влияет (пауза идёт через <code>scene.pause()</code>), но все прежние замеры длиннее 15 с занижали потери. В новых сценариях защита стоит; <code>stability</code> стоит перемерить</td>
+          <td class="num">physics</td>
+        </tr>
+        <tr>
+          <td><strong>Реальный потолок вместимости — 14–15 коробок</strong></td>
+          <td>12 едет чисто, 16 теряет 3.33 при аккуратной езде, 20 в развороте — 11.33</td>
+          <td>Задокументировать как проектный потолок; выше 16 набирать бессмысленно</td>
+          <td class="num">physics</td>
+        </tr>
+        <tr>
+          <td><strong>Взрыв в момент смены рельсы жёстче обычного</strong></td>
+          <td>оставляет 0–2 из 8 против 2–3, +23 %, 3 сида из 3</td>
+          <td>Смена рельсы — штатный способ уворота от бомбы, и наказывать за него вдвойне нелогично. Кандидат на правку после плейтеста</td>
+          <td class="num">physics</td>
+        </tr>
+        <tr>
+          <td><strong>Скупленный магазин утраивает доход</strong></td>
+          <td>3 480 → 11 860 (+241 %), забег 57 → 108 с</td>
+          <td>Покупки работают — но <code>progression()</code> в <code>economy.js</code> считает доход постоянным и потому врёт. Чинить функцию, не цены</td>
+          <td class="num">economy</td>
+        </tr>
+        <tr>
+          <td><strong>Разгона сложности не видно</strong></td>
+          <td>1–2 объекта в воздухе весь забег; расчётная плотность растёт только к 165 с</td>
+          <td>До разгона доживают 2 забега из 7. Либо ускорять рост темпа, либо удлинять забег</td>
+          <td class="num">gameplay</td>
+        </tr>
+        <tr>
+          <td><strong>Модель утечки XP из 5.1 не про эту игру</strong></td>
+          <td>промахов 4–8.5 в минуту вместо обещанных 20–85</td>
+          <td>Переписать расчёт в спеке по факту</td>
+          <td class="num">gameplay</td>
+        </tr>
+        <tr>
+          <td><strong>Груз стоит снаружи бортов и всё ещё считается грузом</strong></td>
+          <td><code>bounds.cargoDropX</code> = 24 px</td>
+          <td>Визуально коробка за бортом, а игра её не потеряла. Уменьшать запас нельзя без перекалибровки потерь</td>
+          <td class="num">gameplay</td>
+        </tr>
+        <tr>
+          <td><strong>Цена сдачи сталкивается с тенью-колонкой</strong></td>
+          <td>видно на скриншотах 60 и 120 с</td>
+          <td>Развести по глубине или сдвинуть ярлык; сам груз цену не заслоняет</td>
+          <td class="num">gameplay</td>
+        </tr>
+        <tr>
+          <td><strong>Длина забега зависит от стиля вчетверо</strong></td>
+          <td>33 с против 141 с и больше</td>
+          <td>Связано с High выше; потолок замера поднять до 400 с, иначе осторожный стиль не домеряется</td>
+          <td class="num">economy</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="rail rail-grey"></div>
+  <h2>Low — шесть находок</h2>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Находка</th><th>Что делать</th><th class="num">Агент</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Проникновение в контактах растёт с высотой штабеля: 0.7 px при 8–12 коробках, 1.52 при 20 — до 5 <code>contactSlop</code></td><td>Косметика; шаг физики максимум 0.5 мс при пороге 4</td><td class="num">physics</td></tr>
+        <tr><td>Соотношение «промах дешевле потери» по факту 9.1×, а спека говорит «вшестеро»</td><td>Поправить формулировку в 5.1, числа <code>CONFIG</code> верны</td><td class="num">economy</td></tr>
+        <tr><td>Жёлтый груз, лежащий в тележке на синей рельсе, спорит с правилом «цвет = рельса»</td><td>Известно и принято в ADR-0002; следить, не путает ли новичков</td><td class="num">gameplay</td></tr>
+        <tr><td>XP-полоса в середине шкалы выглядит бежевой</td><td>Интерполяция зелёный → красный проходит через грязный оттенок; развести через жёлтый</td><td class="num">gameplay</td></tr>
+        <tr><td>Бомба сливается с фоном на потолке разгона</td><td>Лечится само после правок выше; проверить на плейтесте</td><td class="num">gameplay</td></tr>
+        <tr><td>Тик бота висит на реальном времени, а не на кадрах игры</td><td>Под нагрузкой бот принимает меньше решений: любую цифру дохода считать вилкой ±40 %</td><td class="num">economy</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="rail rail-green"></div>
+  <h2>Сводный список изменений перед следующим этапом</h2>
+  <p class="section-note">То, ради чего писался отчёт. Порядок — по тому, что во что упирается.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th class="num">#</th><th>Изменение</th><th>Статус</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="num">1</td><td><strong>Плейтест руками.</strong> Все числа сняты ботом, а он гоняется за коробками через весь экран и разворачивается чаще человека. Пока не сыграно живьём, штрафы и импульсы трогать нельзя</td><td class="bad">Ждёт разработчика</td></tr>
+        <tr><td class="num">2</td><td><code>railImpulse</code> 3.0 → 1.8, импульс смены рельсы делится на массу</td><td class="good">Сделано, перемерено</td></tr>
+        <tr><td class="num">3</td><td>Импульсы масштабируются по рельсе (<code>impulseScale</code>, степень 3)</td><td class="good">Сделано, перемерено</td></tr>
+        <tr><td class="num">4</td><td>Смешанный штабель в покое: <code>boxFriction</code> 0.45 → 0.6 с обязательным перезамером манёвров</td><td class="bad">После плейтеста</td></tr>
+        <tr><td class="num">5</td><td>Решить, что делать с потолком в 8–10 коробок: подсказать его игроку или снизить цену ошибки</td><td class="bad">Решение дизайнера</td></tr>
+        <tr><td class="num">6</td><td>Переписать расчёт утечки XP в разделе 5.1 — он писался до того, как груз стал физическим</td><td class="bad">После плейтеста</td></tr>
+        <tr><td class="num">7</td><td>Починить <code>progression()</code> в <code>economy.js</code>: доход растёт с покупками, а функция считает его постоянным</td><td class="bad">Оснастка</td></tr>
+        <tr><td class="num">8</td><td>Поднять потолок забега в замерах до 400 с и привязать тик бота к кадрам игры</td><td class="bad">Оснастка</td></tr>
+        <tr><td class="num">9</td><td>Развести по глубине ярлык цены сдачи и колонку-тень</td><td class="bad">Мелочь UI</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong>Цены магазина после правок трогать не стали.</strong> Повторный замер на тех же
+    сидах дал 4147 очков при сдаче по 8 против 7560 в предыдущем прогоне — разброс между
+    замерами оказался больше разницы, которую мы ловим. Плюс скупленный магазин утраивает
+    доход, а расчёт считает его постоянным. Менять числа по одному низкому замеру — подгонка
+    под шум; при осторожном стиле магазин и так скупается примерно к десятому забегу.
+  </div>
+
+  <div class="note note-warn">
+    <strong>Как читать эти числа.</strong> Замеры делал бот, а не человек. Он держит цель, пока
+    она достижима, уворачивается от бомб и сдаёт груз на заданном размере — но разворачивается
+    чаще живого игрока, а его тик висит на реальном времени, из-за чего под нагрузкой он
+    принимает меньше решений на игровую секунду. Все цифры дохода стоит считать вилкой ±40 %.
+    Числа физики надёжнее: там прогон детерминирован сидом.
+  </div>
+
+  <div class="note">
+    <strong>Где сырые данные.</strong> Отчёты агентов целиком —
+    <code>tools/qa/reports/agent-physics.md</code>, <code>agent-economy.md</code>,
+    <code>agent-gameplay.md</code>. Числа прогонов — JSON рядом с ними, скриншоты забегов —
+    там же. Сценарии, которыми это получено, лежат в <code>tools/qa/scenarios/</code> и
+    запускаются одной командой.
+  </div>
+
+  <footer>
+    Cart Rush · docs/qa/ai-test-report-2026-08-17.html · пункт 8 QA-документа ·
+    агенты: .claude/agents/{physics,economy,gameplay}-tester.md
+  </footer>
+
+</div>

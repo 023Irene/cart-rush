@@ -1,0 +1,244 @@
+{
+  "summary": {
+    "label": "run3",
+    "date": "2026-08-17T10:57:46.264Z",
+    "seeds": [
+      11,
+      22,
+      33
+    ],
+    "tests": {
+      "mix12": {
+        "caught": 9.67,
+        "caughtRaw": [
+          10,
+          10,
+          9
+        ],
+        "lostAtRest": 1.33,
+        "lostAtRestRaw": [
+          0,
+          3,
+          1
+        ],
+        "lostCalm": 1,
+        "lostCalmRaw": [
+          1,
+          0,
+          2
+        ],
+        "lostTurn": 0,
+        "lostTurnRaw": [
+          0,
+          0,
+          0
+        ],
+        "afterTurn": [
+          9,
+          7,
+          6
+        ],
+        "maxDepth": 0.762,
+        "stackTop": -123
+      },
+      "med12": {
+        "caught": 7.33,
+        "caughtRaw": [
+          10,
+          7,
+          5
+        ],
+        "lostAtRest": 0.33,
+        "lostAtRestRaw": [
+          1,
+          0,
+          0
+        ],
+        "lostCalm": 0.67,
+        "lostCalmRaw": [
+          1,
+          1,
+          0
+        ],
+        "lostTurn": 0.67,
+        "lostTurnRaw": [
+          1,
+          1,
+          0
+        ],
+        "afterTurn": [
+          7,
+          5,
+          5
+        ],
+        "maxDepth": 0.729,
+        "stackTop": -137.4
+      },
+      "mix16": {
+        "caught": 10.33,
+        "caughtRaw": [
+          12,
+          9,
+          10
+        ],
+        "lostAtRest": 0,
+        "lostAtRestRaw": [
+          0,
+          0,
+          0
+        ],
+        "lostCalm": 1,
+        "lostCalmRaw": [
+          3,
+          0,
+          0
+        ],
+        "lostTurn": 1.67,
+        "lostTurnRaw": [
+          0,
+          2,
+          3
+        ],
+        "afterTurn": [
+          9,
+          7,
+          7
+        ],
+        "maxDepth": 0.923,
+        "stackTop": -162.4
+      }
+    },
+    "errors": []
+  },
+  "rows": [
+    {
+      "seed": 11,
+      "mix12": {
+        "dropped": 12,
+        "caught": 10,
+        "missedWhileBuilding": 2,
+        "afterRest": 10,
+        "lostAtRest": 0,
+        "afterCalm": 9,
+        "lostCalm": 1,
+        "afterTurn": 9,
+        "lostTurn": 0,
+        "maxDepth": 0.762,
+        "stackTop": -142.5
+      },
+      "med12": {
+        "dropped": 12,
+        "caught": 10,
+        "missedWhileBuilding": 2,
+        "afterRest": 9,
+        "lostAtRest": 1,
+        "afterCalm": 8,
+        "lostCalm": 1,
+        "afterTurn": 7,
+        "lostTurn": 1,
+        "maxDepth": 0.729,
+        "stackTop": -126
+      },
+      "mix16": {
+        "dropped": 16,
+        "caught": 12,
+        "missedWhileBuilding": 4,
+        "afterRest": 12,
+        "lostAtRest": 0,
+        "afterCalm": 9,
+        "lostCalm": 3,
+        "afterTurn": 9,
+        "lostTurn": 0,
+        "maxDepth": 0.923,
+        "stackTop": -253
+      },
+      "errors": []
+    },
+    {
+      "seed": 22,
+      "mix12": {
+        "dropped": 12,
+        "caught": 10,
+        "missedWhileBuilding": 2,
+        "afterRest": 7,
+        "lostAtRest": 3,
+        "afterCalm": 7,
+        "lostCalm": 0,
+        "afterTurn": 7,
+        "lostTurn": 0,
+        "maxDepth": 0.754,
+        "stackTop": -112.9
+      },
+      "med12": {
+        "dropped": 12,
+        "caught": 7,
+        "missedWhileBuilding": 5,
+        "afterRest": 7,
+        "lostAtRest": 0,
+        "afterCalm": 6,
+        "lostCalm": 1,
+        "afterTurn": 5,
+        "lostTurn": 1,
+        "maxDepth": 0.711,
+        "stackTop": -166.9
+      },
+      "mix16": {
+        "dropped": 16,
+        "caught": 9,
+        "missedWhileBuilding": 7,
+        "afterRest": 9,
+        "lostAtRest": 0,
+        "afterCalm": 9,
+        "lostCalm": 0,
+        "afterTurn": 7,
+        "lostTurn": 2,
+        "maxDepth": 0.718,
+        "stackTop": -109.1
+      },
+      "errors": []
+    },
+    {
+      "seed": 33,
+      "mix12": {
+        "dropped": 12,
+        "caught": 9,
+        "missedWhileBuilding": 3,
+        "afterRest": 8,
+        "lostAtRest": 1,
+        "afterCalm": 6,
+        "lostCalm": 2,
+        "afterTurn": 6,
+        "lostTurn": 0,
+        "maxDepth": 0.67,
+        "stackTop": -113.6
+      },
+      "med12": {
+        "dropped": 12,
+        "caught": 5,
+        "missedWhileBuilding": 7,
+        "afterRest": 5,
+        "lostAtRest": 0,
+        "afterCalm": 5,
+        "lostCalm": 0,
+        "afterTurn": 5,
+        "lostTurn": 0,
+        "maxDepth": 0.635,
+        "stackTop": -119.3
+      },
+      "mix16": {
+        "dropped": 16,
+        "caught": 10,
+        "missedWhileBuilding": 6,
+        "afterRest": 10,
+        "lostAtRest": 0,
+        "afterCalm": 10,
+        "lostCalm": 0,
+        "afterTurn": 7,
+        "lostTurn": 3,
+        "maxDepth": 0.69,
+        "stackTop": -125.1
+      },
+      "errors": []
+    }
+  ]
+}

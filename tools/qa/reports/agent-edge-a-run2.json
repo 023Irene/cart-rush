@@ -1,0 +1,436 @@
+{
+  "summary": {
+    "label": "run2",
+    "part": "a",
+    "date": "2026-08-17T10:47:16.373Z",
+    "seeds": [
+      11,
+      22,
+      33
+    ],
+    "tests": {
+      "rest_med12": {
+        "lost": 0,
+        "lostRaw": [
+          0,
+          0,
+          0
+        ],
+        "left": 12,
+        "leftRaw": [
+          12,
+          12,
+          12
+        ],
+        "maxDepth": 0.69,
+        "extra": [
+          {
+            "maxDrift": 0,
+            "awake": 12,
+            "settleLost": 0,
+            "stepMs": 0.3
+          },
+          {
+            "maxDrift": 0,
+            "awake": 12,
+            "settleLost": 0,
+            "stepMs": 0.1
+          },
+          {
+            "maxDrift": 0,
+            "awake": 12,
+            "settleLost": 0,
+            "stepMs": 0.2
+          }
+        ]
+      },
+      "rest_mix12": {
+        "lost": 0.33,
+        "lostRaw": [
+          0,
+          1,
+          0
+        ],
+        "left": 11,
+        "leftRaw": [
+          12,
+          11,
+          10
+        ],
+        "maxDepth": 0.79,
+        "extra": [
+          {
+            "maxDrift": 0.54,
+            "awake": 12,
+            "settleLost": 0,
+            "stepMs": 0.2
+          },
+          {
+            "maxDrift": 12.59,
+            "awake": 11,
+            "settleLost": 0,
+            "stepMs": 0.2
+          },
+          {
+            "maxDrift": 1.51,
+            "awake": 10,
+            "settleLost": 2,
+            "stepMs": 0.3
+          }
+        ]
+      },
+      "blast_switch": {
+        "lost": 7,
+        "lostRaw": [
+          8,
+          7,
+          6
+        ],
+        "left": 1,
+        "leftRaw": [
+          0,
+          1,
+          2
+        ],
+        "maxDepth": 0.64,
+        "extra": [
+          {
+            "rail": 0,
+            "stepMs": 0.2
+          },
+          {
+            "rail": 0,
+            "stepMs": 0.3
+          },
+          {
+            "rail": 0,
+            "stepMs": 0.1
+          }
+        ]
+      },
+      "blast_plain": {
+        "lost": 5.67,
+        "lostRaw": [
+          5,
+          6,
+          6
+        ],
+        "left": 2.33,
+        "leftRaw": [
+          3,
+          2,
+          2
+        ],
+        "maxDepth": 0.73,
+        "extra": [
+          {
+            "rail": 0,
+            "stepMs": 0.2
+          },
+          {
+            "rail": 0,
+            "stepMs": 0.1
+          },
+          {
+            "rail": 0,
+            "stepMs": 0.2
+          }
+        ]
+      },
+      "bomb_empty": {
+        "lost": 0,
+        "lostRaw": [
+          0,
+          0,
+          0
+        ],
+        "left": 0,
+        "leftRaw": [
+          0,
+          0,
+          0
+        ],
+        "maxDepth": null,
+        "extra": [
+          {
+            "alive": true,
+            "xpBefore": 700,
+            "xpAfter": 700,
+            "fallSpeed": 198
+          },
+          {
+            "alive": true,
+            "xpBefore": 700,
+            "xpAfter": 700,
+            "fallSpeed": 198
+          },
+          {
+            "alive": true,
+            "xpBefore": 700,
+            "xpAfter": 700,
+            "fallSpeed": 198
+          }
+        ]
+      },
+      "catch_turn": {
+        "lost": 0,
+        "lostRaw": [
+          0,
+          0,
+          0
+        ],
+        "left": 7,
+        "leftRaw": [
+          7,
+          7,
+          7
+        ],
+        "maxDepth": 0.71,
+        "extra": [
+          {
+            "stepMs": 0
+          },
+          {
+            "stepMs": 0.1
+          },
+          {
+            "stepMs": 0.2
+          }
+        ]
+      },
+      "catch_calm": {
+        "lost": 0,
+        "lostRaw": [
+          0,
+          0,
+          0
+        ],
+        "left": 7,
+        "leftRaw": [
+          7,
+          7,
+          7
+        ],
+        "maxDepth": 0.76,
+        "extra": [
+          {
+            "stepMs": 0.2
+          },
+          {
+            "stepMs": 0.1
+          },
+          {
+            "stepMs": 0.1
+          }
+        ]
+      }
+    },
+    "errors": []
+  },
+  "rows": [
+    {
+      "seed": 11,
+      "part": "a",
+      "rest_med12": {
+        "settled": 12,
+        "left": 12,
+        "lost": 0,
+        "maxDepth": 0.687,
+        "stepMs": 0.3,
+        "maxDrift": 0,
+        "awake": 12,
+        "settleLost": 0
+      },
+      "rest_mix12": {
+        "settled": 12,
+        "left": 12,
+        "lost": 0,
+        "maxDepth": 0.884,
+        "stepMs": 0.2,
+        "maxDrift": 0.54,
+        "awake": 12,
+        "settleLost": 0
+      },
+      "blast_switch": {
+        "settled": 8,
+        "left": 0,
+        "lost": 8,
+        "maxDepth": 0.635,
+        "stepMs": 0.2,
+        "rail": 0
+      },
+      "blast_plain": {
+        "settled": 8,
+        "left": 3,
+        "lost": 5,
+        "maxDepth": 0.757,
+        "stepMs": 0.2,
+        "rail": 0
+      },
+      "bomb_empty": {
+        "settled": 0,
+        "left": 0,
+        "lost": 0,
+        "alive": true,
+        "xpBefore": 700,
+        "xpAfter": 700,
+        "fallingLeft": 0,
+        "newErrors": [],
+        "fallSpeed": 198
+      },
+      "catch_turn": {
+        "settled": 6,
+        "expected": 7,
+        "left": 7,
+        "lost": 0,
+        "maxDepth": 0.716,
+        "stepMs": 0
+      },
+      "catch_calm": {
+        "settled": 6,
+        "expected": 7,
+        "left": 7,
+        "lost": 0,
+        "maxDepth": 0.74,
+        "stepMs": 0.2
+      },
+      "errors": []
+    },
+    {
+      "seed": 22,
+      "part": "a",
+      "rest_med12": {
+        "settled": 12,
+        "left": 12,
+        "lost": 0,
+        "maxDepth": 0.687,
+        "stepMs": 0.1,
+        "maxDrift": 0,
+        "awake": 12,
+        "settleLost": 0
+      },
+      "rest_mix12": {
+        "settled": 12,
+        "left": 11,
+        "lost": 1,
+        "maxDepth": 0.719,
+        "stepMs": 0.2,
+        "maxDrift": 12.59,
+        "awake": 11,
+        "settleLost": 0
+      },
+      "blast_switch": {
+        "settled": 8,
+        "left": 1,
+        "lost": 7,
+        "maxDepth": 0.635,
+        "stepMs": 0.3,
+        "rail": 0
+      },
+      "blast_plain": {
+        "settled": 8,
+        "left": 2,
+        "lost": 6,
+        "maxDepth": 0.635,
+        "stepMs": 0.1,
+        "rail": 0
+      },
+      "bomb_empty": {
+        "settled": 0,
+        "left": 0,
+        "lost": 0,
+        "alive": true,
+        "xpBefore": 700,
+        "xpAfter": 700,
+        "fallingLeft": 0,
+        "newErrors": [],
+        "fallSpeed": 198
+      },
+      "catch_turn": {
+        "settled": 6,
+        "expected": 7,
+        "left": 7,
+        "lost": 0,
+        "maxDepth": 0.689,
+        "stepMs": 0.1
+      },
+      "catch_calm": {
+        "settled": 6,
+        "expected": 7,
+        "left": 7,
+        "lost": 0,
+        "maxDepth": 0.74,
+        "stepMs": 0.1
+      },
+      "errors": []
+    },
+    {
+      "seed": 33,
+      "part": "a",
+      "rest_med12": {
+        "settled": 12,
+        "left": 12,
+        "lost": 0,
+        "maxDepth": 0.687,
+        "stepMs": 0.2,
+        "maxDrift": 0,
+        "awake": 12,
+        "settleLost": 0
+      },
+      "rest_mix12": {
+        "settled": 10,
+        "left": 10,
+        "lost": 0,
+        "maxDepth": 0.756,
+        "stepMs": 0.3,
+        "maxDrift": 1.51,
+        "awake": 10,
+        "settleLost": 2
+      },
+      "blast_switch": {
+        "settled": 8,
+        "left": 2,
+        "lost": 6,
+        "maxDepth": 0.635,
+        "stepMs": 0.1,
+        "rail": 0
+      },
+      "blast_plain": {
+        "settled": 8,
+        "left": 2,
+        "lost": 6,
+        "maxDepth": 0.801,
+        "stepMs": 0.2,
+        "rail": 0
+      },
+      "bomb_empty": {
+        "settled": 0,
+        "left": 0,
+        "lost": 0,
+        "alive": true,
+        "xpBefore": 700,
+        "xpAfter": 700,
+        "fallingLeft": 0,
+        "newErrors": [],
+        "fallSpeed": 198
+      },
+      "catch_turn": {
+        "settled": 6,
+        "expected": 7,
+        "left": 7,
+        "lost": 0,
+        "maxDepth": 0.732,
+        "stepMs": 0.2
+      },
+      "catch_calm": {
+        "settled": 6,
+        "expected": 7,
+        "left": 7,
+        "lost": 0,
+        "maxDepth": 0.789,
+        "stepMs": 0.1
+      },
+      "errors": []
+    }
+  ]
+}

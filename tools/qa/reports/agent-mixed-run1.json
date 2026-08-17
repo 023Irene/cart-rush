@@ -1,0 +1,551 @@
+{
+  "summary": {
+    "label": "run1",
+    "date": "2026-08-17T10:42:34.149Z",
+    "seeds": [
+      11,
+      22,
+      33
+    ],
+    "tests": {
+      "mix12_rest": {
+        "settled": 12,
+        "left": 11,
+        "lost": 1,
+        "lostRaw": [
+          0,
+          1,
+          2
+        ],
+        "settledRaw": [
+          12,
+          12,
+          12
+        ],
+        "settleDepth": 0.75,
+        "maxDepth": 0.851,
+        "maxStepMs": 0.3,
+        "stackTop": -144.47
+      },
+      "mix12_calm": {
+        "settled": 12,
+        "left": 10.67,
+        "lost": 1.33,
+        "lostRaw": [
+          1,
+          1,
+          2
+        ],
+        "settledRaw": [
+          12,
+          12,
+          12
+        ],
+        "settleDepth": 0.76,
+        "maxDepth": 0.882,
+        "maxStepMs": 0.5,
+        "stackTop": -144.23
+      },
+      "mix12_turn": {
+        "settled": 12,
+        "left": 9.67,
+        "lost": 2.33,
+        "lostRaw": [
+          3,
+          1,
+          3
+        ],
+        "settledRaw": [
+          12,
+          12,
+          12
+        ],
+        "settleDepth": 0.75,
+        "maxDepth": 1.1,
+        "maxStepMs": 0.4,
+        "stackTop": -144.23
+      },
+      "mix12_rail": {
+        "settled": 12,
+        "left": 9.33,
+        "lost": 2.67,
+        "lostRaw": [
+          1,
+          2,
+          5
+        ],
+        "settledRaw": [
+          12,
+          12,
+          12
+        ],
+        "settleDepth": 0.78,
+        "maxDepth": 0.928,
+        "maxStepMs": 0.3,
+        "stackTop": -144.2
+      },
+      "med16": {
+        "settled": 16,
+        "left": 12.67,
+        "lost": 3.33,
+        "lostRaw": [
+          2,
+          3,
+          5
+        ],
+        "settledRaw": [
+          16,
+          16,
+          16
+        ],
+        "settleDepth": 0.87,
+        "maxDepth": 1.041,
+        "maxStepMs": 0.3,
+        "stackTop": -260.67
+      },
+      "med20": {
+        "settled": 20,
+        "left": 17.33,
+        "lost": 2.67,
+        "lostRaw": [
+          2,
+          6,
+          0
+        ],
+        "settledRaw": [
+          20,
+          20,
+          20
+        ],
+        "settleDepth": 1.02,
+        "maxDepth": 1.384,
+        "maxStepMs": 0.3,
+        "stackTop": -308.2
+      },
+      "mix16": {
+        "settled": 15.67,
+        "left": 12,
+        "lost": 3.67,
+        "lostRaw": [
+          1,
+          5,
+          5
+        ],
+        "settledRaw": [
+          16,
+          16,
+          15
+        ],
+        "settleDepth": 0.83,
+        "maxDepth": 0.899,
+        "maxStepMs": 0.4,
+        "stackTop": -187.7
+      },
+      "mix20": {
+        "settled": 17.67,
+        "left": 12.33,
+        "lost": 5.33,
+        "lostRaw": [
+          9,
+          2,
+          5
+        ],
+        "settledRaw": [
+          18,
+          18,
+          17
+        ],
+        "settleDepth": 0.92,
+        "maxDepth": 1.046,
+        "maxStepMs": 0.4,
+        "stackTop": -236.3
+      },
+      "med20_turn": {
+        "settled": 20,
+        "left": 8.67,
+        "lost": 11.33,
+        "lostRaw": [
+          8,
+          12,
+          14
+        ],
+        "settledRaw": [
+          20,
+          20,
+          20
+        ],
+        "settleDepth": 0.84,
+        "maxDepth": 1.52,
+        "maxStepMs": 0.3,
+        "stackTop": -307.9
+      },
+      "mix20_turn": {
+        "settled": 19,
+        "left": 9.67,
+        "lost": 9.33,
+        "lostRaw": [
+          11,
+          11,
+          6
+        ],
+        "settledRaw": [
+          20,
+          19,
+          18
+        ],
+        "settleDepth": 1.06,
+        "maxDepth": 1.185,
+        "maxStepMs": 0.3,
+        "stackTop": -263.97
+      }
+    },
+    "errors": []
+  },
+  "rows": [
+    {
+      "seed": 11,
+      "mixList12": "medium,medium,small,small,small,small,small,medium,large,large,small,medium",
+      "mix12_rest": {
+        "placed": 12,
+        "settled": 12,
+        "left": 12,
+        "lost": 0,
+        "settleDepth": 0.851,
+        "maxDepth": 0.851,
+        "maxStepMs": 0.2,
+        "stackTop": -166.3,
+        "sleeping": 0
+      },
+      "mix12_calm": {
+        "placed": 12,
+        "settled": 12,
+        "left": 11,
+        "lost": 1,
+        "settleDepth": 0.882,
+        "maxDepth": 0.882,
+        "maxStepMs": 0.2,
+        "stackTop": -166.2,
+        "sleeping": 0
+      },
+      "mix12_turn": {
+        "placed": 12,
+        "settled": 12,
+        "left": 9,
+        "lost": 3,
+        "settleDepth": 0.851,
+        "maxDepth": 0.851,
+        "maxStepMs": 0.1,
+        "stackTop": -166.3,
+        "sleeping": 0
+      },
+      "mix12_rail": {
+        "placed": 12,
+        "settled": 12,
+        "left": 11,
+        "lost": 1,
+        "settleDepth": 0.928,
+        "maxDepth": 0.928,
+        "maxStepMs": 0.3,
+        "stackTop": -166.1,
+        "sleeping": 0
+      },
+      "med16": {
+        "placed": 16,
+        "settled": 16,
+        "left": 14,
+        "lost": 2,
+        "settleDepth": 0.79,
+        "maxDepth": 0.956,
+        "maxStepMs": 0.3,
+        "stackTop": -260.8,
+        "sleeping": 0
+      },
+      "med20": {
+        "placed": 20,
+        "settled": 20,
+        "left": 18,
+        "lost": 2,
+        "settleDepth": 0.842,
+        "maxDepth": 1.076,
+        "maxStepMs": 0.3,
+        "stackTop": -307.9,
+        "sleeping": 0
+      },
+      "mix16": {
+        "placed": 16,
+        "settled": 16,
+        "left": 15,
+        "lost": 1,
+        "settleDepth": 0.894,
+        "maxDepth": 0.899,
+        "maxStepMs": 0.4,
+        "stackTop": -213.9,
+        "sleeping": 0
+      },
+      "mix20": {
+        "placed": 20,
+        "settled": 18,
+        "left": 9,
+        "lost": 9,
+        "settleDepth": 0.905,
+        "maxDepth": 1.046,
+        "maxStepMs": 0.2,
+        "stackTop": -225,
+        "sleeping": 0
+      },
+      "med20_turn": {
+        "placed": 20,
+        "settled": 20,
+        "left": 12,
+        "lost": 8,
+        "settleDepth": 0.841,
+        "maxDepth": 1.258,
+        "maxStepMs": 0.1,
+        "stackTop": -307.9,
+        "sleeping": 0
+      },
+      "mix20_turn": {
+        "placed": 20,
+        "settled": 20,
+        "left": 9,
+        "lost": 11,
+        "settleDepth": 1.185,
+        "maxDepth": 1.185,
+        "maxStepMs": 0.3,
+        "stackTop": -269.1,
+        "sleeping": 0
+      },
+      "errors": []
+    },
+    {
+      "seed": 22,
+      "mixList12": "medium,small,small,small,small,large,medium,medium,small,large,small,medium",
+      "mix12_rest": {
+        "placed": 12,
+        "settled": 12,
+        "left": 11,
+        "lost": 1,
+        "settleDepth": 0.695,
+        "maxDepth": 0.71,
+        "maxStepMs": 0.1,
+        "stackTop": -138.1,
+        "sleeping": 0
+      },
+      "mix12_calm": {
+        "placed": 12,
+        "settled": 12,
+        "left": 11,
+        "lost": 1,
+        "settleDepth": 0.695,
+        "maxDepth": 0.711,
+        "maxStepMs": 0.1,
+        "stackTop": -138.1,
+        "sleeping": 0
+      },
+      "mix12_turn": {
+        "placed": 12,
+        "settled": 12,
+        "left": 11,
+        "lost": 1,
+        "settleDepth": 0.696,
+        "maxDepth": 1.1,
+        "maxStepMs": 0.2,
+        "stackTop": -138,
+        "sleeping": 0
+      },
+      "mix12_rail": {
+        "placed": 12,
+        "settled": 12,
+        "left": 10,
+        "lost": 2,
+        "settleDepth": 0.702,
+        "maxDepth": 0.772,
+        "maxStepMs": 0.2,
+        "stackTop": -138.1,
+        "sleeping": 0
+      },
+      "med16": {
+        "placed": 16,
+        "settled": 16,
+        "left": 13,
+        "lost": 3,
+        "settleDepth": 0.79,
+        "maxDepth": 0.865,
+        "maxStepMs": 0.2,
+        "stackTop": -260.8,
+        "sleeping": 0
+      },
+      "med20": {
+        "placed": 20,
+        "settled": 20,
+        "left": 14,
+        "lost": 6,
+        "settleDepth": 1.384,
+        "maxDepth": 1.384,
+        "maxStepMs": 0.3,
+        "stackTop": -308.8,
+        "sleeping": 0
+      },
+      "mix16": {
+        "placed": 16,
+        "settled": 16,
+        "left": 11,
+        "lost": 5,
+        "settleDepth": 0.823,
+        "maxDepth": 0.841,
+        "maxStepMs": 0.2,
+        "stackTop": -173.5,
+        "sleeping": 0
+      },
+      "mix20": {
+        "placed": 20,
+        "settled": 18,
+        "left": 16,
+        "lost": 2,
+        "settleDepth": 1.007,
+        "maxDepth": 1.007,
+        "maxStepMs": 0.4,
+        "stackTop": -261.3,
+        "sleeping": 0
+      },
+      "med20_turn": {
+        "placed": 20,
+        "settled": 20,
+        "left": 8,
+        "lost": 12,
+        "settleDepth": 0.841,
+        "maxDepth": 1.487,
+        "maxStepMs": 0.3,
+        "stackTop": -307.9,
+        "sleeping": 0
+      },
+      "mix20_turn": {
+        "placed": 20,
+        "settled": 19,
+        "left": 8,
+        "lost": 11,
+        "settleDepth": 0.989,
+        "maxDepth": 0.989,
+        "maxStepMs": 0.3,
+        "stackTop": -262.7,
+        "sleeping": 0
+      },
+      "errors": []
+    },
+    {
+      "seed": 33,
+      "mixList12": "medium,large,small,medium,small,small,small,small,small,large,medium,medium",
+      "mix12_rest": {
+        "placed": 12,
+        "settled": 12,
+        "left": 10,
+        "lost": 2,
+        "settleDepth": 0.709,
+        "maxDepth": 0.709,
+        "maxStepMs": 0.3,
+        "stackTop": -129,
+        "sleeping": 0
+      },
+      "mix12_calm": {
+        "placed": 12,
+        "settled": 12,
+        "left": 10,
+        "lost": 2,
+        "settleDepth": 0.703,
+        "maxDepth": 0.796,
+        "maxStepMs": 0.5,
+        "stackTop": -128.4,
+        "sleeping": 0
+      },
+      "mix12_turn": {
+        "placed": 12,
+        "settled": 12,
+        "left": 9,
+        "lost": 3,
+        "settleDepth": 0.703,
+        "maxDepth": 0.734,
+        "maxStepMs": 0.4,
+        "stackTop": -128.4,
+        "sleeping": 0
+      },
+      "mix12_rail": {
+        "placed": 12,
+        "settled": 12,
+        "left": 7,
+        "lost": 5,
+        "settleDepth": 0.704,
+        "maxDepth": 0.704,
+        "maxStepMs": 0.3,
+        "stackTop": -128.4,
+        "sleeping": 0
+      },
+      "med16": {
+        "placed": 16,
+        "settled": 16,
+        "left": 11,
+        "lost": 5,
+        "settleDepth": 1.041,
+        "maxDepth": 1.041,
+        "maxStepMs": 0.2,
+        "stackTop": -260.4,
+        "sleeping": 0
+      },
+      "med20": {
+        "placed": 20,
+        "settled": 20,
+        "left": 20,
+        "lost": 0,
+        "settleDepth": 0.842,
+        "maxDepth": 1.064,
+        "maxStepMs": 0.2,
+        "stackTop": -307.9,
+        "sleeping": 0
+      },
+      "mix16": {
+        "placed": 16,
+        "settled": 15,
+        "left": 10,
+        "lost": 5,
+        "settleDepth": 0.768,
+        "maxDepth": 0.786,
+        "maxStepMs": 0.4,
+        "stackTop": -175.7,
+        "sleeping": 0
+      },
+      "mix20": {
+        "placed": 20,
+        "settled": 17,
+        "left": 12,
+        "lost": 5,
+        "settleDepth": 0.858,
+        "maxDepth": 0.874,
+        "maxStepMs": 0.1,
+        "stackTop": -222.6,
+        "sleeping": 0
+      },
+      "med20_turn": {
+        "placed": 20,
+        "settled": 20,
+        "left": 6,
+        "lost": 14,
+        "settleDepth": 0.841,
+        "maxDepth": 1.52,
+        "maxStepMs": 0.3,
+        "stackTop": -307.9,
+        "sleeping": 0
+      },
+      "mix20_turn": {
+        "placed": 20,
+        "settled": 18,
+        "left": 12,
+        "lost": 6,
+        "settleDepth": 1.006,
+        "maxDepth": 1.092,
+        "maxStepMs": 0.1,
+        "stackTop": -260.1,
+        "sleeping": 0
+      },
+      "errors": []
+    }
+  ]
+}

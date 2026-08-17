@@ -1,0 +1,572 @@
+{
+  "summary": {
+    "label": "run2",
+    "part": "b",
+    "date": "2026-08-17T10:51:05.007Z",
+    "seeds": [
+      11,
+      22,
+      33
+    ],
+    "tests": {
+      "bomb_empty": {
+        "lost": 0,
+        "lostRaw": [
+          0,
+          0,
+          0
+        ],
+        "left": 0,
+        "leftRaw": [
+          0,
+          0,
+          0
+        ],
+        "maxDepth": null,
+        "extra": [
+          {
+            "alive": true,
+            "xpBefore": 700,
+            "xpAfter": 600,
+            "fallSpeed": 180
+          },
+          {
+            "alive": true,
+            "xpBefore": 700,
+            "xpAfter": 600,
+            "fallSpeed": 180
+          },
+          {
+            "alive": true,
+            "xpBefore": 700,
+            "xpAfter": 600,
+            "fallSpeed": 180
+          }
+        ]
+      },
+      "front_calm12": {
+        "lost": 0,
+        "lostRaw": [
+          0,
+          0,
+          0
+        ],
+        "left": 12,
+        "leftRaw": [
+          12,
+          12,
+          12
+        ],
+        "maxDepth": 0.77,
+        "extra": [
+          {
+            "scale": 1,
+            "rail": 1,
+            "stepMs": 0.3
+          },
+          {
+            "scale": 1,
+            "rail": 1,
+            "stepMs": 0.1
+          },
+          {
+            "scale": 1,
+            "rail": 1,
+            "stepMs": 0.1
+          }
+        ]
+      },
+      "front_turn12": {
+        "lost": 0.33,
+        "lostRaw": [
+          1,
+          0,
+          0
+        ],
+        "left": 11.67,
+        "leftRaw": [
+          11,
+          12,
+          12
+        ],
+        "maxDepth": 0.73,
+        "extra": [
+          {
+            "scale": 1,
+            "rail": 1,
+            "stepMs": 0.1
+          },
+          {
+            "scale": 1,
+            "rail": 1,
+            "stepMs": 0.2
+          },
+          {
+            "scale": 1,
+            "rail": 1,
+            "stepMs": 0.1
+          }
+        ]
+      },
+      "back_calm12": {
+        "lost": 0,
+        "lostRaw": [
+          0,
+          0,
+          0
+        ],
+        "left": 12,
+        "leftRaw": [
+          12,
+          12,
+          12
+        ],
+        "maxDepth": 0.91,
+        "extra": [
+          {
+            "scale": 0.82,
+            "rail": 0,
+            "stepMs": 0.2
+          },
+          {
+            "scale": 0.82,
+            "rail": 0,
+            "stepMs": 0.2
+          },
+          {
+            "scale": 0.82,
+            "rail": 0,
+            "stepMs": 0.1
+          }
+        ]
+      },
+      "back_turn12": {
+        "lost": 4,
+        "lostRaw": [
+          6,
+          0,
+          6
+        ],
+        "left": 8,
+        "leftRaw": [
+          6,
+          12,
+          6
+        ],
+        "maxDepth": 0.91,
+        "extra": [
+          {
+            "scale": 0.82,
+            "rail": 0,
+            "stepMs": 0.1
+          },
+          {
+            "scale": 0.82,
+            "rail": 0,
+            "stepMs": 0.1
+          },
+          {
+            "scale": 0.82,
+            "rail": 0,
+            "stepMs": 0.1
+          }
+        ]
+      },
+      "front_blast5": {
+        "lost": 3.33,
+        "lostRaw": [
+          3,
+          3,
+          4
+        ],
+        "left": 1.67,
+        "leftRaw": [
+          2,
+          2,
+          1
+        ],
+        "maxDepth": 0.59,
+        "extra": [
+          {
+            "scale": 1,
+            "rail": 1,
+            "stepMs": 0.2
+          },
+          {
+            "scale": 1,
+            "rail": 1,
+            "stepMs": 0.1
+          },
+          {
+            "scale": 1,
+            "rail": 1,
+            "stepMs": 0.1
+          }
+        ]
+      },
+      "back_blast5": {
+        "lost": 3.33,
+        "lostRaw": [
+          3,
+          3,
+          4
+        ],
+        "left": 1.67,
+        "leftRaw": [
+          2,
+          2,
+          1
+        ],
+        "maxDepth": 0.64,
+        "extra": [
+          {
+            "scale": 0.82,
+            "rail": 0,
+            "stepMs": 0.1
+          },
+          {
+            "scale": 0.82,
+            "rail": 0,
+            "stepMs": 0.2
+          },
+          {
+            "scale": 0.82,
+            "rail": 0,
+            "stepMs": 0.3
+          }
+        ]
+      },
+      "catch_slow": {
+        "lost": 0,
+        "lostRaw": [
+          0,
+          0,
+          0
+        ],
+        "left": 10,
+        "leftRaw": [
+          10,
+          10,
+          10
+        ],
+        "maxDepth": 1.11,
+        "extra": [
+          {
+            "catchSpeedMax": 0,
+            "fallSpeed": 180,
+            "stepMs": 0.1
+          },
+          {
+            "catchSpeedMax": 0,
+            "fallSpeed": 180,
+            "stepMs": 0.2
+          },
+          {
+            "catchSpeedMax": 0,
+            "fallSpeed": 180,
+            "stepMs": 0.1
+          }
+        ]
+      },
+      "catch_fast": {
+        "lost": 0,
+        "lostRaw": [
+          0,
+          0,
+          0
+        ],
+        "left": 10,
+        "leftRaw": [
+          10,
+          10,
+          10
+        ],
+        "maxDepth": 1.1,
+        "extra": [
+          {
+            "catchSpeedMax": 0,
+            "fallSpeed": 500,
+            "stepMs": 0.1
+          },
+          {
+            "catchSpeedMax": 0,
+            "fallSpeed": 500,
+            "stepMs": 0.2
+          },
+          {
+            "catchSpeedMax": 0.03,
+            "fallSpeed": 500,
+            "stepMs": 0.2
+          }
+        ]
+      }
+    },
+    "errors": []
+  },
+  "rows": [
+    {
+      "seed": 11,
+      "part": "b",
+      "bomb_empty": {
+        "settled": 0,
+        "left": 0,
+        "lost": 0,
+        "alive": true,
+        "xpBefore": 700,
+        "xpAfter": 600,
+        "fallingLeft": 0,
+        "newErrors": [],
+        "fallSpeed": 180
+      },
+      "front_calm12": {
+        "settled": 12,
+        "left": 12,
+        "lost": 0,
+        "maxDepth": 0.802,
+        "stepMs": 0.3,
+        "scale": 1,
+        "rail": 1
+      },
+      "front_turn12": {
+        "settled": 12,
+        "left": 11,
+        "lost": 1,
+        "maxDepth": 0.717,
+        "stepMs": 0.1,
+        "scale": 1,
+        "rail": 1
+      },
+      "back_calm12": {
+        "settled": 12,
+        "left": 12,
+        "lost": 0,
+        "maxDepth": 0.909,
+        "stepMs": 0.2,
+        "scale": 0.82,
+        "rail": 0
+      },
+      "back_turn12": {
+        "settled": 12,
+        "left": 6,
+        "lost": 6,
+        "maxDepth": 0.687,
+        "stepMs": 0.1,
+        "scale": 0.82,
+        "rail": 0
+      },
+      "front_blast5": {
+        "settled": 5,
+        "left": 2,
+        "lost": 3,
+        "maxDepth": 0.587,
+        "stepMs": 0.2,
+        "scale": 1,
+        "rail": 1
+      },
+      "back_blast5": {
+        "settled": 5,
+        "left": 2,
+        "lost": 3,
+        "maxDepth": 0.678,
+        "stepMs": 0.1,
+        "scale": 0.82,
+        "rail": 0
+      },
+      "catch_slow": {
+        "fallSpeed": 180,
+        "dropped": 10,
+        "left": 10,
+        "lost": 0,
+        "maxDepth": 1.114,
+        "stepMs": 0.1,
+        "catchSpeedMax": 0
+      },
+      "catch_fast": {
+        "fallSpeed": 500,
+        "dropped": 10,
+        "left": 10,
+        "lost": 0,
+        "maxDepth": 1.114,
+        "stepMs": 0.1,
+        "catchSpeedMax": 0
+      },
+      "errors": []
+    },
+    {
+      "seed": 22,
+      "part": "b",
+      "bomb_empty": {
+        "settled": 0,
+        "left": 0,
+        "lost": 0,
+        "alive": true,
+        "xpBefore": 700,
+        "xpAfter": 600,
+        "fallingLeft": 0,
+        "newErrors": [],
+        "fallSpeed": 180
+      },
+      "front_calm12": {
+        "settled": 12,
+        "left": 12,
+        "lost": 0,
+        "maxDepth": 0.791,
+        "stepMs": 0.1,
+        "scale": 1,
+        "rail": 1
+      },
+      "front_turn12": {
+        "settled": 12,
+        "left": 12,
+        "lost": 0,
+        "maxDepth": 0.737,
+        "stepMs": 0.2,
+        "scale": 1,
+        "rail": 1
+      },
+      "back_calm12": {
+        "settled": 12,
+        "left": 12,
+        "lost": 0,
+        "maxDepth": 0.839,
+        "stepMs": 0.2,
+        "scale": 0.82,
+        "rail": 0
+      },
+      "back_turn12": {
+        "settled": 12,
+        "left": 12,
+        "lost": 0,
+        "maxDepth": 0.97,
+        "stepMs": 0.1,
+        "scale": 0.82,
+        "rail": 0
+      },
+      "front_blast5": {
+        "settled": 5,
+        "left": 2,
+        "lost": 3,
+        "maxDepth": 0.597,
+        "stepMs": 0.1,
+        "scale": 1,
+        "rail": 1
+      },
+      "back_blast5": {
+        "settled": 5,
+        "left": 2,
+        "lost": 3,
+        "maxDepth": 0.662,
+        "stepMs": 0.2,
+        "scale": 0.82,
+        "rail": 0
+      },
+      "catch_slow": {
+        "fallSpeed": 180,
+        "dropped": 10,
+        "left": 10,
+        "lost": 0,
+        "maxDepth": 1.114,
+        "stepMs": 0.2,
+        "catchSpeedMax": 0
+      },
+      "catch_fast": {
+        "fallSpeed": 500,
+        "dropped": 10,
+        "left": 10,
+        "lost": 0,
+        "maxDepth": 1.114,
+        "stepMs": 0.2,
+        "catchSpeedMax": 0
+      },
+      "errors": []
+    },
+    {
+      "seed": 33,
+      "part": "b",
+      "bomb_empty": {
+        "settled": 0,
+        "left": 0,
+        "lost": 0,
+        "alive": true,
+        "xpBefore": 700,
+        "xpAfter": 600,
+        "fallingLeft": 0,
+        "newErrors": [],
+        "fallSpeed": 180
+      },
+      "front_calm12": {
+        "settled": 12,
+        "left": 12,
+        "lost": 0,
+        "maxDepth": 0.711,
+        "stepMs": 0.1,
+        "scale": 1,
+        "rail": 1
+      },
+      "front_turn12": {
+        "settled": 12,
+        "left": 12,
+        "lost": 0,
+        "maxDepth": 0.73,
+        "stepMs": 0.1,
+        "scale": 1,
+        "rail": 1
+      },
+      "back_calm12": {
+        "settled": 12,
+        "left": 12,
+        "lost": 0,
+        "maxDepth": 0.971,
+        "stepMs": 0.1,
+        "scale": 0.82,
+        "rail": 0
+      },
+      "back_turn12": {
+        "settled": 12,
+        "left": 6,
+        "lost": 6,
+        "maxDepth": 1.084,
+        "stepMs": 0.1,
+        "scale": 0.82,
+        "rail": 0
+      },
+      "front_blast5": {
+        "settled": 5,
+        "left": 1,
+        "lost": 4,
+        "maxDepth": 0.587,
+        "stepMs": 0.1,
+        "scale": 1,
+        "rail": 1
+      },
+      "back_blast5": {
+        "settled": 5,
+        "left": 1,
+        "lost": 4,
+        "maxDepth": 0.587,
+        "stepMs": 0.3,
+        "scale": 0.82,
+        "rail": 0
+      },
+      "catch_slow": {
+        "fallSpeed": 180,
+        "dropped": 10,
+        "left": 10,
+        "lost": 0,
+        "maxDepth": 1.114,
+        "stepMs": 0.1,
+        "catchSpeedMax": 0
+      },
+      "catch_fast": {
+        "fallSpeed": 500,
+        "dropped": 10,
+        "left": 10,
+        "lost": 0,
+        "maxDepth": 1.063,
+        "stepMs": 0.2,
+        "catchSpeedMax": 0.03
+      },
+      "errors": []
+    }
+  ]
+}

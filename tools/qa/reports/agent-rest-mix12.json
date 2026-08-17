@@ -1,0 +1,509 @@
+{
+  "label": "mix12",
+  "date": "2026-08-17T10:53:04.717Z",
+  "rows": [
+    {
+      "seed": 22,
+      "plan": [
+        {
+          "size": "medium",
+          "dx": -64,
+          "dy": -26
+        },
+        {
+          "size": "small",
+          "dx": -24,
+          "dy": -18
+        },
+        {
+          "size": "small",
+          "dx": 8,
+          "dy": -18
+        },
+        {
+          "size": "small",
+          "dx": 40,
+          "dy": -18
+        },
+        {
+          "size": "small",
+          "dx": 72,
+          "dy": -18
+        },
+        {
+          "size": "large",
+          "dx": -56,
+          "dy": -83
+        },
+        {
+          "size": "medium",
+          "dx": 0,
+          "dy": -75
+        },
+        {
+          "size": "medium",
+          "dx": 48,
+          "dy": -75
+        },
+        {
+          "size": "small",
+          "dx": -72,
+          "dy": -132
+        },
+        {
+          "size": "large",
+          "dx": -24,
+          "dy": -148
+        },
+        {
+          "size": "small",
+          "dx": 24,
+          "dy": -132
+        },
+        {
+          "size": "medium",
+          "dx": 64,
+          "dy": -140
+        }
+      ],
+      "placed": 12,
+      "first": 12,
+      "last": 11,
+      "lost": 1,
+      "gone": [
+        {
+          "size": "large",
+          "dx": -24,
+          "dy": -148,
+          "vx": 0,
+          "vy": 0,
+          "sleeping": false
+        },
+        {
+          "size": "small",
+          "dx": 24,
+          "dy": -132,
+          "vx": 0,
+          "vy": 0,
+          "sleeping": false
+        },
+        {
+          "size": "medium",
+          "dx": 64,
+          "dy": -140,
+          "vx": 0,
+          "vy": 0,
+          "sleeping": false
+        }
+      ],
+      "topShift": [
+        {
+          "size": "small",
+          "dist": 43.18
+        },
+        {
+          "size": "large",
+          "dist": 40.23
+        },
+        {
+          "size": "small",
+          "dist": 32.62
+        }
+      ],
+      "maxDepth": 0.708,
+      "maxSpeedAfterSettle": 1.77,
+      "sleepingAtEnd": 0,
+      "counts": [
+        12,
+        12,
+        12,
+        12,
+        12,
+        12,
+        12,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11
+      ],
+      "speeds": [
+        0.55,
+        0.79,
+        0.15,
+        0.01,
+        0.07,
+        0.58,
+        1.77,
+        0.01,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "errors": []
+    },
+    {
+      "seed": 33,
+      "plan": [
+        {
+          "size": "medium",
+          "dx": -64,
+          "dy": -26
+        },
+        {
+          "size": "large",
+          "dx": -8,
+          "dy": -34
+        },
+        {
+          "size": "small",
+          "dx": 40,
+          "dy": -18
+        },
+        {
+          "size": "medium",
+          "dx": -64,
+          "dy": -91
+        },
+        {
+          "size": "small",
+          "dx": -24,
+          "dy": -83
+        },
+        {
+          "size": "small",
+          "dx": 8,
+          "dy": -83
+        },
+        {
+          "size": "small",
+          "dx": 40,
+          "dy": -83
+        },
+        {
+          "size": "small",
+          "dx": 72,
+          "dy": -83
+        },
+        {
+          "size": "small",
+          "dx": -72,
+          "dy": -132
+        },
+        {
+          "size": "large",
+          "dx": -24,
+          "dy": -148
+        },
+        {
+          "size": "medium",
+          "dx": 32,
+          "dy": -140
+        },
+        {
+          "size": "medium",
+          "dx": -64,
+          "dy": -205
+        }
+      ],
+      "placed": 12,
+      "first": 12,
+      "last": 11,
+      "lost": 1,
+      "gone": [
+        {
+          "size": "small",
+          "dx": 72,
+          "dy": -83,
+          "vx": 0,
+          "vy": 0,
+          "sleeping": false
+        },
+        {
+          "size": "medium",
+          "dx": -64,
+          "dy": -205,
+          "vx": 0,
+          "vy": 0,
+          "sleeping": false
+        }
+      ],
+      "topShift": [
+        {
+          "size": "small",
+          "dist": 44.3
+        },
+        {
+          "size": "small",
+          "dist": 40.02
+        },
+        {
+          "size": "small",
+          "dist": 37.13
+        }
+      ],
+      "maxDepth": 0.789,
+      "maxSpeedAfterSettle": 0,
+      "sleepingAtEnd": 0,
+      "counts": [
+        12,
+        12,
+        12,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11,
+        11
+      ],
+      "speeds": [
+        0.55,
+        1.27,
+        1.73,
+        0.01,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "errors": []
+    },
+    {
+      "seed": 44,
+      "plan": [
+        {
+          "size": "small",
+          "dx": -72,
+          "dy": -18
+        },
+        {
+          "size": "medium",
+          "dx": -32,
+          "dy": -26
+        },
+        {
+          "size": "medium",
+          "dx": 16,
+          "dy": -26
+        },
+        {
+          "size": "small",
+          "dx": 56,
+          "dy": -18
+        },
+        {
+          "size": "large",
+          "dx": -56,
+          "dy": -83
+        },
+        {
+          "size": "medium",
+          "dx": 0,
+          "dy": -75
+        },
+        {
+          "size": "small",
+          "dx": 40,
+          "dy": -67
+        },
+        {
+          "size": "small",
+          "dx": 72,
+          "dy": -67
+        },
+        {
+          "size": "medium",
+          "dx": -64,
+          "dy": -140
+        },
+        {
+          "size": "small",
+          "dx": -24,
+          "dy": -132
+        },
+        {
+          "size": "small",
+          "dx": 8,
+          "dy": -132
+        },
+        {
+          "size": "large",
+          "dx": 56,
+          "dy": -148
+        }
+      ],
+      "placed": 12,
+      "first": 12,
+      "last": 9,
+      "lost": 3,
+      "gone": [
+        {
+          "size": "large",
+          "dx": -56,
+          "dy": -83,
+          "vx": 0,
+          "vy": 0,
+          "sleeping": false
+        },
+        {
+          "size": "medium",
+          "dx": -64,
+          "dy": -140,
+          "vx": 0,
+          "vy": 0,
+          "sleeping": false
+        },
+        {
+          "size": "small",
+          "dx": -24,
+          "dy": -132,
+          "vx": 0,
+          "vy": 0,
+          "sleeping": false
+        },
+        {
+          "size": "small",
+          "dx": 8,
+          "dy": -132,
+          "vx": 0,
+          "vy": 0,
+          "sleeping": false
+        },
+        {
+          "size": "large",
+          "dx": 56,
+          "dy": -148,
+          "vx": 0,
+          "vy": 0,
+          "sleeping": false
+        }
+      ],
+      "topShift": [
+        {
+          "size": "small",
+          "dist": 36.21
+        },
+        {
+          "size": "small",
+          "dist": 6.98
+        },
+        {
+          "size": "medium",
+          "dist": 3.68
+        }
+      ],
+      "maxDepth": 0.714,
+      "maxSpeedAfterSettle": 2.85,
+      "sleepingAtEnd": 0,
+      "counts": [
+        12,
+        12,
+        12,
+        11,
+        11,
+        11,
+        11,
+        11,
+        10,
+        10,
+        10,
+        10,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9,
+        9
+      ],
+      "speeds": [
+        0.55,
+        1.04,
+        1.39,
+        0.01,
+        0,
+        0,
+        0.6,
+        0.56,
+        0.72,
+        0.71,
+        1.12,
+        2.85,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "errors": []
+    }
+  ]
+}

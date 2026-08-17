@@ -103,6 +103,16 @@ async function runSeed(seed) {
     action: async h => { await h.drive('right', 700); await h.drive('left', 700); }
   });
 
+  // S3б — тот же разворот на ЗАДНЕЙ рельсе. Импульсы задавались для передней,
+  // а борта и порог вылета там уменьшены в 0.82 — разница была в 12 раз
+  await g.ensureRun();
+  await g.switchRail('up');
+  out.s3b_turn_back = await measure(g, {
+    size: 'medium', count: 10,
+    action: async h => { await h.drive('right', 700); await h.drive('left', 700); }
+  });
+  await g.switchRail('down');
+
   // S4 — смена рельсы с полным кузовом
   out.s4_rail = await measure(g, {
     size: 'medium', count: 8,
@@ -183,6 +193,7 @@ async function main() {
     s2_rest_maxDrift: avg(rows, r => r.s2_rest.maxDrift),
     s2_rest_lost: avg(rows, r => r.s2_rest.settled - r.s2_rest.left),
     s3_turn_lost: avg(rows, r => r.s3_turn.lost),
+    s3b_turn_back_lost: avg(rows, r => r.s3b_turn_back.lost),
     s4_rail_lost: avg(rows, r => r.s4_rail.lost),
     s5_shift_small: avg(rows, r => r.s5_small.avgShift),
     s5_shift_large: avg(rows, r => r.s5_large.avgShift),
@@ -200,6 +211,7 @@ async function main() {
   console.log(`S2 покой 8 с, макс. дрейф px:           ${summary.s2_rest_maxDrift}   (цель < 2)`);
   console.log(`S2 покой, потеряно само собой:          ${summary.s2_rest_lost}   (цель 0)`);
   console.log(`S3 разворот, потеряно из 10:            ${summary.s3_turn_lost}   (цель 1-3)`);
+  console.log(`S3б разворот на ЗАДНЕЙ, потеряно из 10:  ${summary.s3b_turn_back_lost}   (цель 1-3, как спереди)`);
   console.log(`S4 смена рельсы, потеряно из 8:         ${summary.s4_rail_lost}   (цель 1-2)`);
   const s5ok = summary.s5_ratio && (summary.s5_ratio >= 1.5 || summary.s5_ratio <= 0.67);
   console.log(`S5 сдвиг small / large:                 ${summary.s5_shift_small} / ${summary.s5_shift_large} = ${summary.s5_ratio}   (различимо: ${s5ok ? 'да' : 'НЕТ'})`);

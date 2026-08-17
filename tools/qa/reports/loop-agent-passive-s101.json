@@ -1,0 +1,317 @@
+{
+  "unloadAt": 0,
+  "seed": 101,
+  "capSec": 200,
+  "wall": 60,
+  "result": {
+    "score": 0,
+    "elapsed": 57292,
+    "over": true,
+    "currency": 0,
+    "bestScore": 0
+  },
+  "stats": {},
+  "probe": {
+    "drops": 6,
+    "dropXp": 350,
+    "misses": 33,
+    "missXp": 285,
+    "bombs": 2,
+    "bombXp": 200,
+    "boosters": 1,
+    "boosterXp": 131,
+    "unloads": 0,
+    "unloadPoints": 0,
+    "log": [
+      [
+        4339,
+        "miss",
+        5
+      ],
+      [
+        6355,
+        "miss",
+        5
+      ],
+      [
+        8638,
+        "miss",
+        10
+      ],
+      [
+        10638,
+        "miss",
+        10
+      ],
+      [
+        12038,
+        "miss",
+        10
+      ],
+      [
+        14755,
+        "miss",
+        5
+      ],
+      [
+        16138,
+        "miss",
+        10
+      ],
+      [
+        17488,
+        "miss",
+        18
+      ],
+      [
+        20255,
+        "miss",
+        5
+      ],
+      [
+        21705,
+        "miss",
+        18
+      ],
+      [
+        23471,
+        "miss",
+        10
+      ],
+      [
+        24204,
+        "miss",
+        10
+      ],
+      [
+        25404,
+        "miss",
+        5
+      ],
+      [
+        27321,
+        "miss",
+        10
+      ],
+      [
+        27665,
+        "booster",
+        131
+      ],
+      [
+        28621,
+        "miss",
+        10
+      ],
+      [
+        29271,
+        "miss",
+        5
+      ],
+      [
+        30621,
+        "drop",
+        150
+      ],
+      [
+        31771,
+        "miss",
+        10
+      ],
+      [
+        33637,
+        "miss",
+        5
+      ],
+      [
+        34971,
+        "miss",
+        18
+      ],
+      [
+        36504,
+        "miss",
+        5
+      ],
+      [
+        37254,
+        "miss",
+        10
+      ],
+      [
+        38365,
+        "bomb",
+        100
+      ],
+      [
+        40137,
+        "drop",
+        30
+      ],
+      [
+        40820,
+        "miss",
+        10
+      ],
+      [
+        43120,
+        "miss",
+        5
+      ],
+      [
+        44304,
+        "miss",
+        5
+      ],
+      [
+        45437,
+        "miss",
+        5
+      ],
+      [
+        46520,
+        "miss",
+        5
+      ],
+      [
+        48787,
+        "miss",
+        5
+      ],
+      [
+        49403,
+        "miss",
+        5
+      ],
+      [
+        50487,
+        "miss",
+        5
+      ],
+      [
+        51587,
+        "miss",
+        5
+      ],
+      [
+        53270,
+        "miss",
+        18
+      ],
+      [
+        53770,
+        "miss",
+        5
+      ],
+      [
+        55270,
+        "drop",
+        80
+      ],
+      [
+        56536,
+        "miss",
+        18
+      ],
+      [
+        57047,
+        "bomb",
+        100
+      ],
+      [
+        57153,
+        "drop",
+        30
+      ],
+      [
+        57200,
+        "drop",
+        30
+      ],
+      [
+        57292,
+        "drop",
+        30
+      ]
+    ],
+    "passive": true
+  },
+  "slices": [
+    {
+      "sec": 15,
+      "alive": true,
+      "elapsed": 15616,
+      "score": 0,
+      "xp": 655,
+      "maxXp": 700,
+      "cargo": 2,
+      "falling": 2,
+      "drops": 0,
+      "dropXp": 0,
+      "misses": 6,
+      "missXp": 45,
+      "bombs": 0,
+      "bombXp": 0,
+      "boosters": 0,
+      "boosterXp": 0,
+      "unloads": 0,
+      "unloadPoints": 0
+    },
+    {
+      "sec": 30,
+      "alive": true,
+      "elapsed": 30626,
+      "score": 0,
+      "xp": 535,
+      "maxXp": 700,
+      "cargo": 3,
+      "falling": 1,
+      "drops": 1,
+      "dropXp": 150,
+      "misses": 16,
+      "missXp": 146,
+      "bombs": 0,
+      "bombXp": 0,
+      "boosters": 1,
+      "boosterXp": 131,
+      "unloads": 0,
+      "unloadPoints": 0
+    },
+    {
+      "sec": 45,
+      "alive": true,
+      "elapsed": 45642,
+      "score": 0,
+      "xp": 332,
+      "maxXp": 700,
+      "cargo": 4,
+      "falling": 1,
+      "drops": 2,
+      "dropXp": 180,
+      "misses": 25,
+      "missXp": 219,
+      "bombs": 1,
+      "bombXp": 100,
+      "boosters": 1,
+      "boosterXp": 131,
+      "unloads": 0,
+      "unloadPoints": 0
+    },
+    {
+      "sec": 60,
+      "alive": false,
+      "cargo": 0,
+      "drops": 6,
+      "dropXp": 350,
+      "misses": 33,
+      "missXp": 285,
+      "bombs": 2,
+      "bombXp": 200,
+      "boosters": 1,
+      "boosterXp": 131,
+      "unloads": 0,
+      "unloadPoints": 0
+    }
+  ],
+  "errors": []
+}

@@ -1,0 +1,163 @@
+{
+  "unloadAt": 30,
+  "seed": 202,
+  "capSec": 75,
+  "wall": 45,
+  "result": {
+    "score": 0,
+    "elapsed": 35354,
+    "over": true,
+    "currency": 0,
+    "bestScore": 0
+  },
+  "stats": {
+    "unloads": 0,
+    "sizes": [],
+    "railSwitches": 14,
+    "dodges": 0,
+    "drops": 12,
+    "misses": 1
+  },
+  "probe": {
+    "drops": 12,
+    "dropXp": 850,
+    "misses": 1,
+    "missXp": 10,
+    "bombs": 0,
+    "bombXp": 0,
+    "boosters": 1,
+    "boosterXp": 150,
+    "unloads": 0,
+    "unloadPoints": 0,
+    "log": [
+      [
+        12888,
+        "drop",
+        30
+      ],
+      [
+        14955,
+        "drop",
+        80
+      ],
+      [
+        19755,
+        "drop",
+        30
+      ],
+      [
+        20488,
+        "drop",
+        30
+      ],
+      [
+        21588,
+        "drop",
+        150
+      ],
+      [
+        24871,
+        "drop",
+        80
+      ],
+      [
+        25088,
+        "drop",
+        80
+      ],
+      [
+        25154,
+        "drop",
+        30
+      ],
+      [
+        27199,
+        "booster",
+        150
+      ],
+      [
+        27888,
+        "drop",
+        80
+      ],
+      [
+        29354,
+        "miss",
+        10
+      ],
+      [
+        34354,
+        "drop",
+        30
+      ],
+      [
+        34604,
+        "drop",
+        80
+      ],
+      [
+        35354,
+        "drop",
+        150
+      ]
+    ]
+  },
+  "slices": [
+    {
+      "sec": 15,
+      "alive": true,
+      "elapsed": 15627,
+      "score": 0,
+      "xp": 590,
+      "maxXp": 700,
+      "cargo": 7,
+      "falling": 1,
+      "drops": 2,
+      "dropXp": 110,
+      "misses": 0,
+      "missXp": 0,
+      "bombs": 0,
+      "bombXp": 0,
+      "boosters": 0,
+      "boosterXp": 0,
+      "unloads": 0,
+      "unloadPoints": 0
+    },
+    {
+      "sec": 30,
+      "alive": true,
+      "elapsed": 30687,
+      "score": 0,
+      "xp": 250,
+      "maxXp": 700,
+      "cargo": 10,
+      "falling": 1,
+      "drops": 9,
+      "dropXp": 590,
+      "misses": 1,
+      "missXp": 10,
+      "bombs": 0,
+      "bombXp": 0,
+      "boosters": 1,
+      "boosterXp": 150,
+      "unloads": 0,
+      "unloadPoints": 0
+    },
+    {
+      "sec": 45,
+      "alive": false,
+      "cargo": 0,
+      "drops": 12,
+      "dropXp": 850,
+      "misses": 1,
+      "missXp": 10,
+      "bombs": 0,
+      "bombXp": 0,
+      "boosters": 1,
+      "boosterXp": 150,
+      "unloads": 0,
+      "unloadPoints": 0
+    }
+  ],
+  "errors": []
+}
