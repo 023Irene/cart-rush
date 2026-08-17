@@ -1,0 +1,264 @@
+{
+  "summary": {
+    "label": "after-physics",
+    "date": "2026-08-17T10:09:19.455Z",
+    "bot8": {
+      "runs": 5,
+      "score": 2288,
+      "scoreMin": 960,
+      "scoreMax": 4080,
+      "seconds": 49.7,
+      "unloads": 1.8,
+      "avgUnloadSize": 8,
+      "maxUnloadSize": 8,
+      "dodges": 0.2,
+      "timedOut": 0
+    },
+    "bot5": {
+      "runs": 3,
+      "score": 8475,
+      "scoreMin": 3550,
+      "scoreMax": 12575,
+      "seconds": 119.5,
+      "unloads": 16,
+      "avgUnloadSize": 5,
+      "maxUnloadSize": 5,
+      "dodges": 10,
+      "timedOut": 0
+    },
+    "currentPrices": [
+      [
+        3000,
+        9000,
+        24000
+      ],
+      [
+        4800,
+        12000,
+        30000
+      ],
+      [
+        6000,
+        18000
+      ]
+    ],
+    "currentProgression": {
+      "firstBuyAfterRun": 2,
+      "allBoughtAfterRun": 47,
+      "total": 106800
+    },
+    "proportionSum": 17800,
+    "wantedMultiplier": 1,
+    "proposedPrices": [
+      [
+        500,
+        1500,
+        4000
+      ],
+      [
+        800,
+        2000,
+        5000
+      ],
+      [
+        1000,
+        3000
+      ]
+    ],
+    "proposedProgression": {
+      "firstBuyAfterRun": 1,
+      "allBoughtAfterRun": 8,
+      "total": 17800
+    },
+    "errors": []
+  },
+  "rows": [
+    {
+      "seed": 101,
+      "unloadAt": 8,
+      "score": 960,
+      "elapsed": 38148,
+      "over": true,
+      "currency": 960,
+      "bestScore": 960,
+      "unloads": 1,
+      "sizes": [
+        8
+      ],
+      "railSwitches": 7,
+      "dodges": 0,
+      "timedOut": false,
+      "errors": []
+    },
+    {
+      "seed": 202,
+      "unloadAt": 8,
+      "score": 1080,
+      "elapsed": 46015,
+      "over": true,
+      "currency": 1080,
+      "bestScore": 1080,
+      "unloads": 1,
+      "sizes": [
+        8
+      ],
+      "railSwitches": 14,
+      "dodges": 0,
+      "timedOut": false,
+      "errors": []
+    },
+    {
+      "seed": 303,
+      "unloadAt": 8,
+      "score": 1320,
+      "elapsed": 44815,
+      "over": true,
+      "currency": 1320,
+      "bestScore": 1320,
+      "unloads": 1,
+      "sizes": [
+        8
+      ],
+      "railSwitches": 19,
+      "dodges": 1,
+      "timedOut": false,
+      "errors": []
+    },
+    {
+      "seed": 404,
+      "unloadAt": 8,
+      "score": 4000,
+      "elapsed": 64686,
+      "over": true,
+      "currency": 4000,
+      "bestScore": 4000,
+      "unloads": 3,
+      "sizes": [
+        8,
+        8,
+        8
+      ],
+      "railSwitches": 19,
+      "dodges": 0,
+      "timedOut": false,
+      "errors": []
+    },
+    {
+      "seed": 505,
+      "unloadAt": 8,
+      "score": 4080,
+      "elapsed": 54603,
+      "over": true,
+      "currency": 4080,
+      "bestScore": 4080,
+      "unloads": 3,
+      "sizes": [
+        8,
+        8,
+        8
+      ],
+      "railSwitches": 17,
+      "dodges": 0,
+      "timedOut": false,
+      "errors": []
+    }
+  ],
+  "cautious": [
+    {
+      "seed": 101,
+      "unloadAt": 5,
+      "score": 3550,
+      "elapsed": 72752,
+      "over": true,
+      "currency": 3550,
+      "bestScore": 3550,
+      "unloads": 6,
+      "sizes": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "railSwitches": 21,
+      "dodges": 20,
+      "timedOut": false,
+      "errors": []
+    },
+    {
+      "seed": 202,
+      "unloadAt": 5,
+      "score": 12575,
+      "elapsed": 164598,
+      "over": true,
+      "currency": 12575,
+      "bestScore": 12575,
+      "unloads": 26,
+      "sizes": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "railSwitches": 61,
+      "dodges": 1,
+      "timedOut": false,
+      "errors": []
+    },
+    {
+      "seed": 303,
+      "unloadAt": 5,
+      "score": 9300,
+      "elapsed": 121267,
+      "over": true,
+      "currency": 9300,
+      "bestScore": 9300,
+      "unloads": 16,
+      "sizes": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "railSwitches": 30,
+      "dodges": 9,
+      "timedOut": false,
+      "errors": []
+    }
+  ]
+}

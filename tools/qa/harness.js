@@ -243,6 +243,107 @@ function initScript({ seed, save }) {
       s.fallingBoxes = [];
     },
 
+    /* ---------- бот «среднего толкового игрока» ---------- */
+
+    // Бот живёт в странице и правит те же keys.isDown, что ставит Phaser при
+    // нажатии клавиши: гонять управление через CDP по кадрам слишком медленно,
+    // а любой обходной путь измерял бы не ту игру.
+    //
+    // Стратегия простая и человеческая: едем к ближайшей достижимой коробке
+    // своей рельсы, уворачиваемся от бомбы, сдаём груз на заданном размере
+    startBot(options) {
+      const opt = Object.assign({ unloadAt: 8, dodge: 70, tickMs: 50 }, options || {});
+      const s = this.scene();
+      this.botStats = { unloads: 0, sizes: [], railSwitches: 0, dodges: 0, drops: 0, misses: 0 };
+      this.botTarget = null;
+
+      // Считаем, на чём именно утекает XP: потери груза за борт или промахи
+      const stats = this.botStats;
+      if (!s.__origDrop) {
+        s.__origDrop = s.penalizeDrop;
+        s.penalizeDrop = function (amount) { stats.drops++; return s.__origDrop.call(s, amount); };
+        s.__origMiss = s.penalizeMiss;
+        s.penalizeMiss = function (a, x, y) { stats.misses++; return s.__origMiss.call(s, a, x, y); };
+      }
+
+      const keys = s.keys;
+      const press = dir => {
+        keys.left.isDown = dir === -1;
+        keys.right.isDown = dir === 1;
+      };
+
+      this.botTimer = setInterval(() => {
+        if (!this.alive()) return;
+
+        const cart = s.cart;
+        const mine = s.fallingBoxes.filter(b => b.boxData.rail === cart.rail);
+        const bombs = mine.filter(b => b.boxData.kind === 'bomb');
+        const goods = mine.filter(b => b.boxData.kind !== 'bomb');
+
+        // Сдача: держать бесконечно нельзя — резкий манёвр рискует всем грузом
+        if (s.cargo.length >= opt.unloadAt) {
+          this.botStats.sizes.push(s.cargo.length);
+          this.botStats.unloads++;
+          s.unloadCargo();
+        }
+
+        // Бомба важнее коробки: она отнимает XP и разносит штабель
+        const danger = bombs.find(b => Math.abs(b.x - cart.x) < opt.dodge && b.y > 0);
+        if (danger) {
+          this.botStats.dodges++;
+          press(danger.x > cart.x ? -1 : 1);
+          return;
+        }
+
+        // Цель держится, пока жива и достижима. Без этого бот перевыбирал цель
+        // каждый тик, дёргался влево-вправо десятки раз за забег и разносил
+        // собственный штабель — живой игрок так не играет
+        let target = this.botTarget && goods.includes(this.botTarget) ? this.botTarget : null;
+        if (!target) {
+          target = goods.sort((a, b) => b.y - a.y)[0] || null;
+          this.botTarget = target;
+        }
+        if (!target) {
+          // На своей рельсе пусто, а на соседней есть — переезжаем
+          const other = s.fallingBoxes.find(
+            b => b.boxData.rail !== cart.rail && b.boxData.kind !== 'bomb' && b.y < 200);
+          if (other && !s.switching) {
+            this.botStats.railSwitches++;
+            s.switchRail(other.boxData.rail - cart.rail);
+          }
+          press(0);
+          return;
+        }
+
+        // Мёртвая зона широкая: коробка ловится кузовом шириной 200 px, гнаться
+        // за точным совпадением центров незачем, а каждый доворот бьёт по грузу
+        const delta = target.x - cart.x;
+        press(Math.abs(delta) < 40 ? 0 : Math.sign(delta));
+      }, opt.tickMs);
+
+      return true;
+    },
+
+    stopBot() {
+      clearInterval(this.botTimer);
+      const s = this.scene();
+      if (s && s.keys) { s.keys.left.isDown = false; s.keys.right.isDown = false; }
+      return this.botStats;
+    },
+
+    // Итог забега: счёт, длительность, что накопилось в сохранении
+    runResult() {
+      const s = this.scene();
+      const save = JSON.parse(localStorage.getItem('cartRushSave') || '{}');
+      return {
+        score: s ? s.run.score : null,
+        elapsed: s ? Math.round(s.run.elapsed) : null,
+        over: s ? !!s.over : true,
+        currency: save.currency || 0,
+        bestScore: save.bestScore || 0
+      };
+    },
+
     // Проверка находки Н1: трение у ЧАСТЕЙ составного тела, а не у родителя
     cartFriction() {
       const parts = this.scene().cartBody.parts;
@@ -315,6 +416,23 @@ class Harness {
   pauseSpawn(flag) { return this.qa('pauseSpawn', flag); }
   clearCargo() { return this.qa('clearCargo'); }
   refillXp() { return this.qa('refillXp'); }
+  startBot(opts) { return this.qa('startBot', opts); }
+  stopBot() { return this.qa('stopBot'); }
+  runResult() { return this.qa('runResult'); }
+
+  // Забег ботом до конца XP или до потолка по времени
+  async playRun({ unloadAt = 8, timeoutMs = 300000 } = {}) {
+    await this.startBot({ unloadAt });
+    const started = Date.now();
+    while (Date.now() - started < timeoutMs) {
+      await this.wait(2000);
+      const alive = await this.qa('alive');
+      if (!alive) break;
+    }
+    const stats = await this.stopBot();
+    const result = await this.runResult();
+    return { ...result, ...stats, timedOut: Date.now() - started >= timeoutMs };
+  }
   freezeXp(flag) { return this.qa('freezeXp', flag); }
 
   // Забег мог кончиться между сценариями — поднимаем заново и восстанавливаем режим

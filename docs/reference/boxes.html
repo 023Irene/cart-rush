@@ -1,0 +1,450 @@
+<title>Коробки Cart Rush</title>
+
+<style>
+  :root {
+    --ground: #eceef1; --surface: #f7f8fa; --raised: #ffffff; --line: #cfd4da;
+    --text: #1c1f23; --dim: #5d646d; --faint: #878e97;
+    --blue: #2f62b4; --blue-solid: #3d7ad6; --yellow: #8d6210; --yellow-solid: #e8b33a;
+    --danger: #b93a3a; --green: #3f8f57; --cart: #7a7f87;
+    --shadow: 0 1px 2px rgba(20,24,28,.08), 0 8px 24px rgba(20,24,28,.06);
+    --grid: rgba(28,31,35,.05);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #1a1d21; --surface: #24272c; --raised: #2b2e33; --line: #3a3e45;
+      --text: #e8eaed; --dim: #9aa0a8; --faint: #6f767f;
+      --blue: #6b9dea; --blue-solid: #3d7ad6; --yellow: #e8b33a; --yellow-solid: #e8b33a;
+      --danger: #e06060; --green: #5fbf7a; --cart: #8b9099;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.3);
+      --grid: rgba(232,234,237,.045);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #1a1d21; --surface: #24272c; --raised: #2b2e33; --line: #3a3e45;
+    --text: #e8eaed; --dim: #9aa0a8; --faint: #6f767f;
+    --blue: #6b9dea; --blue-solid: #3d7ad6; --yellow: #e8b33a; --yellow-solid: #e8b33a;
+    --danger: #e06060; --green: #5fbf7a; --cart: #8b9099;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.3);
+    --grid: rgba(232,234,237,.045);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px),
+                      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 32px 32px;
+    color: var(--text);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 48px 24px 96px; }
+
+  h1, h2, h3, .display {
+    font-family: Bahnschrift, "DIN Alternate", "Segoe UI Semibold", "Segoe UI", sans-serif;
+    font-weight: 600;
+    text-wrap: balance;
+    letter-spacing: .01em;
+  }
+
+  code, .mono, td.num, .spec dd {
+    font-family: "Cascadia Mono", Consolas, ui-monospace, "SFMono-Regular", monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- шапка ---------- */
+  header { border-bottom: 2px solid var(--text); padding-bottom: 20px; margin-bottom: 8px; }
+  .eyebrow {
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    font-size: 12px; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--faint); margin: 0 0 10px;
+  }
+  h1 { font-size: clamp(34px, 6vw, 54px); line-height: 1.05; margin: 0 0 12px; }
+  .lede { font-size: 18px; color: var(--dim); max-width: 62ch; margin: 0; }
+
+  .meta {
+    display: flex; flex-wrap: wrap; gap: 8px 28px;
+    font-size: 13px; color: var(--faint); margin: 20px 0 0;
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+  }
+
+  /* ---------- рельса-разделитель ---------- */
+  .rail { height: 6px; border-radius: 3px; margin: 56px 0 28px; position: relative; }
+  .rail::after {
+    content: ""; position: absolute; inset: 0; border-radius: 3px;
+    background: repeating-linear-gradient(90deg, transparent 0 18px, rgba(0,0,0,.28) 18px 26px);
+  }
+  .rail-blue { background: var(--blue-solid); }
+  .rail-yellow { background: var(--yellow-solid); }
+  .rail-grey { background: var(--cart); }
+
+  h2 { font-size: 27px; margin: 0 0 6px; }
+  .section-note { color: var(--dim); margin: 0 0 26px; max-width: 66ch; }
+
+  /* ---------- статусы ---------- */
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+    padding: 3px 9px; border-radius: 3px; border: 1px solid; white-space: nowrap;
+  }
+  .chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .chip-live { color: var(--green); border-color: color-mix(in srgb, var(--green) 45%, transparent); }
+  .chip-backlog { color: var(--faint); border-color: var(--line); }
+  .chip-new { color: var(--yellow); border-color: color-mix(in srgb, var(--yellow) 50%, transparent); border-style: dashed; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; margin: 22px 0 0; }
+  .legend span.txt { font-size: 13px; color: var(--dim); }
+
+  /* ---------- карточки коробок ---------- */
+  .cards { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+  .card {
+    background: var(--raised); border: 1px solid var(--line); border-radius: 6px;
+    box-shadow: var(--shadow); overflow: hidden;
+  }
+  .card-head {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    padding: 14px 18px; border-bottom: 1px solid var(--line); background: var(--surface);
+  }
+  .sku {
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    font-size: 12px; letter-spacing: .08em; color: var(--faint);
+  }
+  .card-title { font-size: 20px; margin: 0; }
+
+  .stage {
+    display: flex; align-items: flex-end; justify-content: center; gap: 26px;
+    padding: 28px 18px 22px; min-height: 150px;
+    background:
+      linear-gradient(180deg, transparent 0 calc(100% - 26px), var(--surface) calc(100% - 26px) 100%);
+    border-bottom: 1px solid var(--line);
+  }
+  .floor { position: relative; display: flex; align-items: flex-end; gap: 22px; }
+  .floor::after {
+    content: ""; position: absolute; left: -18px; right: -18px; bottom: -9px; height: 3px;
+    background: var(--cart); opacity: .55; border-radius: 2px;
+  }
+
+  /* коробка рисуется в реальных пикселях игры */
+  .box { position: relative; border-radius: 2px; box-shadow: inset 0 0 0 2px rgba(0,0,0,.35); }
+  .box::after {
+    content: ""; position: absolute; left: 18%; top: 42%; width: 64%; height: 16%;
+    background: rgba(255,255,255,.28); border-radius: 1px;
+  }
+  .box-blue { background: var(--blue-solid); }
+  .box-yellow { background: var(--yellow-solid); }
+  .box-tag {
+    display: block; text-align: center; margin-top: 8px;
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    font-size: 11px; color: var(--faint);
+  }
+  .box-wrap { display: flex; flex-direction: column; align-items: center; }
+
+  .spec { margin: 0; padding: 16px 18px 18px; display: grid; grid-template-columns: 1fr auto; gap: 7px 16px; }
+  .spec dt { color: var(--dim); font-size: 14px; margin: 0; }
+  .spec dd { margin: 0; text-align: right; font-size: 14px; }
+  .spec dd.accent-blue { color: var(--blue); }
+  .spec dd.accent-danger { color: var(--danger); }
+
+  /* ---------- таблицы ---------- */
+  .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--raised); }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 14px; }
+  th, td { padding: 11px 16px; text-align: left; border-bottom: 1px solid var(--line); }
+  thead th {
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--faint); background: var(--surface); font-weight: 400;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.num { text-align: right; }
+
+  /* ---------- врезки ---------- */
+  .note {
+    border-left: 3px solid var(--blue-solid); background: var(--surface);
+    padding: 14px 18px; border-radius: 0 5px 5px 0; margin: 22px 0 0; color: var(--dim);
+  }
+  .note strong { color: var(--text); }
+  .note-warn { border-left-color: var(--yellow-solid); }
+  .note-danger { border-left-color: var(--danger); }
+
+  .grid-2 { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+
+  footer {
+    margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line);
+    font-size: 13px; color: var(--faint);
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+  }
+  a { color: var(--blue); }
+  a:focus-visible, .card:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Cart Rush · справочник ассетов · BOX</p>
+    <h1>Форматы коробок</h1>
+    <p class="lede">Всё, что падает в кузов: реальные пропорции, ценность, штрафы и физический вес.
+      Страница — референс для художника: числа взяты из <code>CONFIG</code> игры, а не придуманы.</p>
+    <div class="meta">
+      <span>Обновлено 17.08.2026</span>
+      <span>Источник: GAME_SPEC 5.2, 5.5</span>
+      <span>Стиль: grey box, примитивы из кода</span>
+    </div>
+  </header>
+
+  <div class="legend">
+    <span class="chip chip-live">В игре</span>
+    <span class="txt">работает сейчас</span>
+    <span class="chip chip-backlog">Бэклог v2</span>
+    <span class="txt">решение есть, отложено</span>
+    <span class="chip chip-new">Вне спеки</span>
+    <span class="txt">в игре нет и в планах не было</span>
+  </div>
+
+  <div class="rail rail-blue"></div>
+  <h2>Три размера, два цвета <span class="chip chip-live">В игре</span></h2>
+  <p class="section-note">Цвет не разыгрывается отдельно: сначала 50/50 выбирается рельса, а цвет
+    жёстко следует из неё. Синие коробки падают только на заднюю рельсу, жёлтые — только на
+    переднюю. Поэтому шесть видов — это три размера в двух цветах, а не шесть разных объектов.</p>
+
+  <div class="cards">
+
+    <article class="card">
+      <div class="card-head">
+        <h3 class="card-title">Малая</h3>
+        <span class="sku">BOX-S-32</span>
+      </div>
+      <div class="stage">
+        <div class="floor">
+          <div class="box-wrap">
+            <div class="box box-blue" style="width:32px;height:32px"></div>
+            <span class="box-tag">32 × 32</span>
+          </div>
+          <div class="box-wrap">
+            <div class="box box-yellow" style="width:32px;height:32px"></div>
+            <span class="box-tag">синяя / жёлтая</span>
+          </div>
+        </div>
+      </div>
+      <dl class="spec">
+        <dt>Габарит</dt><dd>32 × 32 px</dd>
+        <dt>Ценность</dt><dd class="accent-blue">10</dd>
+        <dt>Потеря за борт</dt><dd class="accent-danger">−30 XP</dd>
+        <dt>Промах</dt><dd class="accent-danger">−5 XP</dd>
+        <dt>Доля в спавне</dt><dd>50 %</dd>
+        <dt>Масса</dt><dd>3.07</dd>
+        <dt>densityFactor</dt><dd>1.5</dd>
+      </dl>
+    </article>
+
+    <article class="card">
+      <div class="card-head">
+        <h3 class="card-title">Средняя</h3>
+        <span class="sku">BOX-M-48</span>
+      </div>
+      <div class="stage">
+        <div class="floor">
+          <div class="box-wrap">
+            <div class="box box-blue" style="width:48px;height:48px"></div>
+            <span class="box-tag">48 × 48</span>
+          </div>
+          <div class="box-wrap">
+            <div class="box box-yellow" style="width:48px;height:48px"></div>
+            <span class="box-tag">опорная масса</span>
+          </div>
+        </div>
+      </div>
+      <dl class="spec">
+        <dt>Габарит</dt><dd>48 × 48 px</dd>
+        <dt>Ценность</dt><dd class="accent-blue">25</dd>
+        <dt>Потеря за борт</dt><dd class="accent-danger">−80 XP</dd>
+        <dt>Промах</dt><dd class="accent-danger">−10 XP</dd>
+        <dt>Доля в спавне</dt><dd>35 %</dd>
+        <dt>Масса</dt><dd>5.07</dd>
+        <dt>densityFactor</dt><dd>1.1</dd>
+      </dl>
+    </article>
+
+    <article class="card">
+      <div class="card-head">
+        <h3 class="card-title">Большая</h3>
+        <span class="sku">BOX-L-64</span>
+      </div>
+      <div class="stage">
+        <div class="floor">
+          <div class="box-wrap">
+            <div class="box box-blue" style="width:64px;height:64px"></div>
+            <span class="box-tag">64 × 64</span>
+          </div>
+          <div class="box-wrap">
+            <div class="box box-yellow" style="width:64px;height:64px"></div>
+            <span class="box-tag">самая тяжёлая</span>
+          </div>
+        </div>
+      </div>
+      <dl class="spec">
+        <dt>Габарит</dt><dd>64 × 64 px</dd>
+        <dt>Ценность</dt><dd class="accent-blue">50</dd>
+        <dt>Потеря за борт</dt><dd class="accent-danger">−150 XP</dd>
+        <dt>Промах</dt><dd class="accent-danger">−18 XP</dd>
+        <dt>Доля в спавне</dt><dd>15 %</dd>
+        <dt>Масса</dt><dd>7.37</dd>
+        <dt>densityFactor</dt><dd>0.9</dd>
+      </dl>
+    </article>
+
+  </div>
+
+  <div class="note">
+    <strong>Белая полоска на грани — не украшение.</strong> Коробки в кузове лежат физическими
+    телами и вращаются; без маркировки поворот тела не читается, и штабель выглядит статичной
+    кучей. Полоска идёт на 42 % высоты, занимает 64 % ширины, прозрачность 0.28.
+  </div>
+
+  <div class="rail rail-yellow"></div>
+  <h2>Относительный размер и перспектива</h2>
+  <p class="section-note">Задняя рельса рисуется в масштабе 0.82 — это единственная подсказка
+    глубины в grey box. Коробка на задней рельсе физически меньше, легче и её тело масштабируется
+    вместе с картинкой. Ниже — все три размера в обоих масштабах, в реальных пикселях.</p>
+
+  <div class="grid-2">
+    <article class="card">
+      <div class="card-head">
+        <h3 class="card-title">Передняя рельса</h3>
+        <span class="sku">SCALE 1.00</span>
+      </div>
+      <div class="stage">
+        <div class="floor">
+          <div class="box-wrap"><div class="box box-yellow" style="width:32px;height:32px"></div><span class="box-tag">32</span></div>
+          <div class="box-wrap"><div class="box box-yellow" style="width:48px;height:48px"></div><span class="box-tag">48</span></div>
+          <div class="box-wrap"><div class="box box-yellow" style="width:64px;height:64px"></div><span class="box-tag">64</span></div>
+        </div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-head">
+        <h3 class="card-title">Задняя рельса</h3>
+        <span class="sku">SCALE 0.82</span>
+      </div>
+      <div class="stage">
+        <div class="floor">
+          <div class="box-wrap"><div class="box box-blue" style="width:26px;height:26px"></div><span class="box-tag">26</span></div>
+          <div class="box-wrap"><div class="box box-blue" style="width:39px;height:39px"></div><span class="box-tag">39</span></div>
+          <div class="box-wrap"><div class="box box-blue" style="width:52px;height:52px"></div><span class="box-tag">52</span></div>
+        </div>
+      </div>
+    </article>
+  </div>
+
+  <div class="note">
+    <strong>Кузов — 200 px в ширину, внутри 176 px.</strong> Значит в один слой помещается
+    5 малых, 3 средних или 2 больших коробки. Отсюда и потолок: полный кузов — это примерно
+    11–12 средних коробок в трёх-четырёх слоях, дальше верхушку срывает на первом же резком
+    манёвре.
+  </div>
+
+  <div class="rail rail-grey"></div>
+  <h2>Длинные форматы <span class="chip chip-new">Вне спеки</span></h2>
+  <p class="section-note">Запрошены QA как формат для дизайна. В игре их нет, и в документации
+    они не упоминаются нигде — ни в спеке, ни в бэклоге. Ниже — предложение пропорций и честный
+    список последствий: это не «ещё две картинки», а правка физической модели.</p>
+
+  <div class="cards">
+    <article class="card">
+      <div class="card-head">
+        <h3 class="card-title">Длинная вертикальная</h3>
+        <span class="sku">BOX-V-32×96</span>
+      </div>
+      <div class="stage">
+        <div class="floor">
+          <div class="box-wrap">
+            <div class="box box-blue" style="width:32px;height:96px"></div>
+            <span class="box-tag">32 × 96</span>
+          </div>
+          <div class="box-wrap">
+            <div class="box box-yellow" style="width:32px;height:96px"></div>
+            <span class="box-tag">1 : 3</span>
+          </div>
+        </div>
+      </div>
+      <dl class="spec">
+        <dt>Предлагаемый габарит</dt><dd>32 × 96 px</dd>
+        <dt>Пропорция</dt><dd>1 : 3</dd>
+        <dt>Занимает в слое</dt><dd>как малая</dd>
+        <dt>Высота в кузове</dt><dd>3 слоя сразу</dd>
+        <dt>Ключевой риск</dt><dd>опрокидывание</dd>
+      </dl>
+    </article>
+
+    <article class="card">
+      <div class="card-head">
+        <h3 class="card-title">Длинная горизонтальная</h3>
+        <span class="sku">BOX-H-96×32</span>
+      </div>
+      <div class="stage">
+        <div class="floor">
+          <div class="box-wrap">
+            <div class="box box-blue" style="width:96px;height:32px"></div>
+            <span class="box-tag">96 × 32</span>
+          </div>
+        </div>
+      </div>
+      <dl class="spec">
+        <dt>Предлагаемый габарит</dt><dd>96 × 32 px</dd>
+        <dt>Пропорция</dt><dd>3 : 1</dd>
+        <dt>Занимает в слое</dt><dd>больше половины кузова</dd>
+        <dt>Высота в кузове</dt><dd>как малая</dd>
+        <dt>Ключевой риск</dt><dd>перекрывает борт</dd>
+      </dl>
+    </article>
+  </div>
+
+  <div class="note note-warn">
+    <strong>Что придётся переделать, если их вводить.</strong> Вся калибровка физики груза
+    сделана для квадратов: вытянутое тело опрокидывается принципиально иначе, а множитель
+    «чем выше коробка, тем сильнее её сносит» для вертикальной коробки высотой в три слоя
+    считается неверно — у неё центр масс сразу наверху. Плюс: ловля по ширине кузова,
+    масса и <code>densityFactor</code>, ценность и штрафы, доля в спавне, поведение при взрыве.
+    Это отдельный этап с новым замером, а не добавление двух текстур.
+  </div>
+
+  <div class="note note-danger">
+    <strong>Формальный статус.</strong> Раздел 7 спеки фиксирует контент MVP: «6 видов коробок
+    (3 размера × 2 цвета)». Ввод длинных форматов требует правки раздела 5.2 и отдельного
+    решения — как это было с рельсами (ADR-0002) и штрафом за промах (ADR-0003).
+  </div>
+
+  <div class="rail rail-blue"></div>
+  <h2>Сводка</h2>
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Артикул</th><th>Габарит</th><th>Ценность</th><th>За борт</th>
+          <th>Промах</th><th>Спавн</th><th>Масса</th><th>Статус</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="mono">BOX-S-32</td><td class="num">32 × 32</td><td class="num">10</td><td class="num">−30</td><td class="num">−5</td><td class="num">50 %</td><td class="num">3.07</td><td><span class="chip chip-live">В игре</span></td></tr>
+        <tr><td class="mono">BOX-M-48</td><td class="num">48 × 48</td><td class="num">25</td><td class="num">−80</td><td class="num">−10</td><td class="num">35 %</td><td class="num">5.07</td><td><span class="chip chip-live">В игре</span></td></tr>
+        <tr><td class="mono">BOX-L-64</td><td class="num">64 × 64</td><td class="num">50</td><td class="num">−150</td><td class="num">−18</td><td class="num">15 %</td><td class="num">7.37</td><td><span class="chip chip-live">В игре</span></td></tr>
+        <tr><td class="mono">BOX-V-32×96</td><td class="num">32 × 96</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td><span class="chip chip-new">Вне спеки</span></td></tr>
+        <tr><td class="mono">BOX-H-96×32</td><td class="num">96 × 32</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td><span class="chip chip-new">Вне спеки</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <footer>
+    Cart Rush · docs/reference/boxes.html · числа синхронны CONFIG в index.html на 17.08.2026 ·
+    цвета: синий #3d7ad6, жёлтый #e8b33a
+  </footer>
+
+</div>

@@ -1,0 +1,65 @@
+/* Общий стиль справочников Cart Rush.
+   Палитра взята из CONFIG игры: цех, рельсы, коробки. Заголовки — Bahnschrift
+   (DIN-подобный шрифт промышленной маркировки), числа — моноширинным.
+   Файл держится рядом с страницами для правки; в опубликованные страницы стиль
+   вшит инлайном, потому что артефакт обязан быть самодостаточным. */
+
+:root {
+  /* светлая тема — чертёж на бумаге */
+  --ground: #eceef1;
+  --surface: #f7f8fa;
+  --raised: #ffffff;
+  --line: #cfd4da;
+  --text: #1c1f23;
+  --dim: #5d646d;
+  --faint: #878e97;
+  --blue: #2f62b4;
+  --yellow: #9a6c12;
+  --yellow-solid: #e8b33a;
+  --danger: #b93a3a;
+  --green: #3f8f57;
+  --cart: #7a7f87;
+  --shadow: 0 1px 2px rgba(20, 24, 28, .08), 0 8px 24px rgba(20, 24, 28, .06);
+}
+
+:root:not([data-theme="light"]) {
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #1a1d21;
+    --surface: #24272c;
+    --raised: #2b2e33;
+    --line: #3a3e45;
+    --text: #e8eaed;
+    --dim: #9aa0a8;
+    --faint: #6f767f;
+    --blue: #5b93e6;
+    --yellow: #e8b33a;
+    --yellow-solid: #e8b33a;
+    --danger: #e06060;
+    --green: #5fbf7a;
+    --cart: #7a7f87;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 30px rgba(0, 0, 0, .3);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --ground: #1a1d21;
+  --surface: #24272c;
+  --raised: #2b2e33;
+  --line: #3a3e45;
+  --text: #e8eaed;
+  --dim: #9aa0a8;
+  --faint: #6f767f;
+  --blue: #5b93e6;
+  --yellow: #e8b33a;
+  --yellow-solid: #e8b33a;
+  --danger: #e06060;
+  --green: #5fbf7a;
+  --cart: #7a7f87;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 30px rgba(0, 0, 0, .3);
+  color-scheme: dark;
+}

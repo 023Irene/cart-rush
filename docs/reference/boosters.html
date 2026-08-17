@@ -1,0 +1,410 @@
+<title>Бусты Cart Rush</title>
+
+<style>
+  :root {
+    --ground: #eceef1; --surface: #f7f8fa; --raised: #ffffff; --line: #cfd4da;
+    --text: #1c1f23; --dim: #5d646d; --faint: #878e97;
+    --blue: #2f62b4; --blue-solid: #3d7ad6; --yellow: #8d6210; --yellow-solid: #e8b33a;
+    --danger: #b93a3a; --danger-solid: #d64545; --green: #3f8f57; --green-solid: #5fbf7a;
+    --cart: #7a7f87;
+    --shadow: 0 1px 2px rgba(20,24,28,.08), 0 8px 24px rgba(20,24,28,.06);
+    --grid: rgba(28,31,35,.05);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #1a1d21; --surface: #24272c; --raised: #2b2e33; --line: #3a3e45;
+      --text: #e8eaed; --dim: #9aa0a8; --faint: #6f767f;
+      --blue: #6b9dea; --blue-solid: #3d7ad6; --yellow: #e8b33a; --yellow-solid: #e8b33a;
+      --danger: #e06060; --danger-solid: #d64545; --green: #5fbf7a; --green-solid: #5fbf7a;
+      --cart: #8b9099;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.3);
+      --grid: rgba(232,234,237,.045);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #1a1d21; --surface: #24272c; --raised: #2b2e33; --line: #3a3e45;
+    --text: #e8eaed; --dim: #9aa0a8; --faint: #6f767f;
+    --blue: #6b9dea; --blue-solid: #3d7ad6; --yellow: #e8b33a; --yellow-solid: #e8b33a;
+    --danger: #e06060; --danger-solid: #d64545; --green: #5fbf7a; --green-solid: #5fbf7a;
+    --cart: #8b9099;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.3);
+    --grid: rgba(232,234,237,.045);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0; background: var(--ground);
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px),
+                      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 32px 32px;
+    color: var(--text);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size: 16px; line-height: 1.6;
+  }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 48px 24px 96px; }
+
+  h1, h2, h3, .display {
+    font-family: Bahnschrift, "DIN Alternate", "Segoe UI Semibold", "Segoe UI", sans-serif;
+    font-weight: 600; text-wrap: balance; letter-spacing: .01em;
+  }
+  code, .mono, .spec dd { font-family: "Cascadia Mono", Consolas, ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+  header { border-bottom: 2px solid var(--text); padding-bottom: 20px; }
+  .eyebrow {
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    font-size: 12px; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--faint); margin: 0 0 10px;
+  }
+  h1 { font-size: clamp(34px, 6vw, 54px); line-height: 1.05; margin: 0 0 12px; }
+  .lede { font-size: 18px; color: var(--dim); max-width: 62ch; margin: 0; }
+  .meta {
+    display: flex; flex-wrap: wrap; gap: 8px 28px; font-size: 13px; color: var(--faint);
+    margin: 20px 0 0; font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+  }
+
+  .rail { height: 6px; border-radius: 3px; margin: 56px 0 28px; position: relative; }
+  .rail::after {
+    content: ""; position: absolute; inset: 0; border-radius: 3px;
+    background: repeating-linear-gradient(90deg, transparent 0 18px, rgba(0,0,0,.28) 18px 26px);
+  }
+  .rail-green { background: var(--green-solid); }
+  .rail-danger { background: var(--danger-solid); }
+  .rail-grey { background: var(--cart); }
+
+  h2 { font-size: 27px; margin: 0 0 6px; }
+  .section-note { color: var(--dim); margin: 0 0 26px; max-width: 66ch; }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+    padding: 3px 9px; border-radius: 3px; border: 1px solid; white-space: nowrap;
+  }
+  .chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .chip-live { color: var(--green); border-color: color-mix(in srgb, var(--green) 45%, transparent); }
+  .chip-backlog { color: var(--faint); border-color: var(--line); }
+  .chip-danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; margin: 22px 0 0; }
+  .legend .txt { font-size: 13px; color: var(--dim); }
+
+  .item {
+    display: grid; grid-template-columns: 140px 1fr; gap: 0;
+    background: var(--raised); border: 1px solid var(--line); border-radius: 6px;
+    box-shadow: var(--shadow); overflow: hidden; margin-bottom: 18px;
+  }
+  .item.muted { opacity: .92; }
+  .item-art {
+    display: grid; place-items: center; padding: 24px 12px;
+    background: var(--surface); border-right: 1px solid var(--line);
+  }
+  .item-body { padding: 18px 22px 20px; }
+  .item-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 14px; margin-bottom: 4px; }
+  .item-head h3 { font-size: 22px; margin: 0; }
+  .sku { font-family: "Cascadia Mono", Consolas, ui-monospace, monospace; font-size: 12px; letter-spacing: .08em; color: var(--faint); }
+  .purpose { color: var(--dim); margin: 0 0 14px; max-width: 60ch; }
+
+  .spec { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 18px; font-size: 14px; }
+  .spec dt {
+    color: var(--faint); font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    font-size: 11px; letter-spacing: .09em; text-transform: uppercase; padding-top: 3px;
+  }
+  .spec dd { margin: 0; }
+
+  /* фигуры объектов — те же примитивы, что рисует игра */
+  .glyph { position: relative; border-radius: 3px; box-shadow: inset 0 0 0 2px rgba(0,0,0,.42); }
+  .glyph-booster { width: 36px; height: 36px; background: var(--green-solid); }
+  .glyph-booster::before, .glyph-booster::after {
+    content: ""; position: absolute; background: rgba(255,255,255,.9); border-radius: 1px;
+    left: 50%; top: 50%; transform: translate(-50%, -50%);
+  }
+  .glyph-booster::before { width: 19px; height: 6px; }
+  .glyph-booster::after { width: 6px; height: 19px; }
+
+  .glyph-bomb { width: 40px; height: 40px; background: var(--danger-solid); }
+  .glyph-bomb::before, .glyph-bomb::after {
+    content: ""; position: absolute; background: rgba(0,0,0,.55); left: 50%; top: 50%;
+  }
+  .glyph-bomb::before { width: 19px; height: 5px; transform: translate(-50%,-50%) rotate(45deg); }
+  .glyph-bomb::after { width: 19px; height: 5px; transform: translate(-50%,-50%) rotate(-45deg); }
+
+  .glyph-ghost { width: 36px; height: 36px; background: transparent; border: 2px dashed var(--faint); box-shadow: none; }
+  .glyph-ghost span {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    color: var(--faint); font-size: 18px;
+    font-family: Bahnschrift, "DIN Alternate", "Segoe UI", sans-serif;
+  }
+  .art-tag {
+    display: block; margin-top: 10px; text-align: center;
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    font-size: 11px; color: var(--faint);
+  }
+  .art-col { display: flex; flex-direction: column; align-items: center; }
+
+  .note {
+    border-left: 3px solid var(--green-solid); background: var(--surface);
+    padding: 14px 18px; border-radius: 0 5px 5px 0; margin: 22px 0 0; color: var(--dim);
+  }
+  .note strong { color: var(--text); }
+  .note-warn { border-left-color: var(--yellow-solid); }
+  .note-danger { border-left-color: var(--danger-solid); }
+
+  .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--raised); margin-top: 8px; }
+  table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: 14px; }
+  th, td { padding: 11px 16px; text-align: left; border-bottom: 1px solid var(--line); }
+  thead th {
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace; font-weight: 400;
+    font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); background: var(--surface);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+
+  footer {
+    margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line);
+    font-size: 13px; color: var(--faint); font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+  }
+  a { color: var(--blue); }
+  a:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+
+  @media (max-width: 620px) {
+    .item { grid-template-columns: 1fr; }
+    .item-art { border-right: none; border-bottom: 1px solid var(--line); }
+  }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Cart Rush · справочник ассетов · BST</p>
+    <h1>Бусты и помехи</h1>
+    <p class="lede">Всё, что падает вместе с коробками и меняет ход забега. Один буст работает
+      сейчас, один работает против игрока, ещё четыре описаны как заявка на v2 — с параметрами,
+      но без обещаний.</p>
+    <div class="meta">
+      <span>Обновлено 17.08.2026</span>
+      <span>Источник: GAME_SPEC 5.6, 5.7, 16</span>
+      <span>docs/backlog.md</span>
+    </div>
+  </header>
+
+  <div class="legend">
+    <span class="chip chip-live">В игре</span><span class="txt">работает сейчас</span>
+    <span class="chip chip-danger">Помеха</span><span class="txt">работает против игрока</span>
+    <span class="chip chip-backlog">Бэклог v2</span><span class="txt">отложено осознанно, раздел 16</span>
+  </div>
+
+  <div class="rail rail-green"></div>
+  <h2>Работает сейчас</h2>
+  <p class="section-note">В MVP ровно один буст. Он не украшение: без него утечка XP на промахах
+    ограничивает забег двумя с половиной минутами, и бесконечная аркада перестаёт быть бесконечной.</p>
+
+  <article class="item">
+    <div class="item-art">
+      <div class="art-col">
+        <div class="glyph glyph-booster"></div>
+        <span class="art-tag">36 × 36<br>#5fbf7a</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <div class="item-head">
+        <h3>Восстановление XP</h3>
+        <span class="sku">BST-XP</span>
+        <span class="chip chip-live">В игре</span>
+      </div>
+      <p class="purpose">Возвращает часть шкалы XP — то есть продлевает забег. Единственный
+        источник восстановления в игре.</p>
+      <dl class="spec">
+        <dt>Эффект</dt><dd>+150 XP, но не выше стартового максимума</dd>
+        <dt>Активация</dt><dd>поймать в кузов, как обычную коробку</dd>
+        <dt>Длительность</dt><dd>нет, эффект мгновенный</dd>
+        <dt>Появление</dt><dd>каждые 25 с, свой таймер, от темпа не зависит</dd>
+        <dt>Ограничения</dt><dd>на полном запасе не даёт ничего — вместо «+0 XP» пишется «XP полон»</dd>
+        <dt>Стоимость</dt><dd>бесплатно; пропустить тоже бесплатно</dd>
+        <dt>В кузове</dt><dd>не остаётся: подобрал — исчез</dd>
+        <dt>Обратная связь</dt><dd>всплывает в правом верхнем углу на 1.2 с, deliver.ogg выше на 400 центов</dd>
+      </dl>
+    </div>
+  </article>
+
+  <div class="note">
+    <strong>Потолок отдачи — 360 XP в минуту</strong> при идеальном сборе, против утечки
+    186 XP/мин на старте и 746 на потолке разгона. То есть буст продлевает забег, но не делает
+    его вечным: рано или поздно разгон обгоняет восстановление. Это и есть кривая сложности.
+  </div>
+
+  <div class="rail rail-danger"></div>
+  <h2>Работает против игрока</h2>
+  <p class="section-note">Из усложнителей в MVP только бомба. Она падает вместо очередной коробки,
+    а не в дополнение к ней — то есть с 30-й секунды поток коробок становится на 12 % реже.</p>
+
+  <article class="item">
+    <div class="item-art">
+      <div class="art-col">
+        <div class="glyph glyph-bomb"></div>
+        <span class="art-tag">40 × 40<br>#d64545</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <div class="item-head">
+        <h3>Бомба</h3>
+        <span class="sku">HZD-BOMB</span>
+        <span class="chip chip-danger">Помеха</span>
+      </div>
+      <p class="purpose">Наказывает за жадность: чем выше штабель к моменту взрыва, тем больше
+        груза разлетается. Отнятые XP здесь вторичны.</p>
+      <dl class="spec">
+        <dt>Эффект</dt><dd>−100 XP и радиальный разлёт груза от точки взрыва</dd>
+        <dt>Активация</dt><dd>поймать в кузов; коснуться верхней коробки штабеля достаточно</dd>
+        <dt>Появление</dt><dd>с 30-й секунды, 12 % спавнов вместо коробки</dd>
+        <dt>Потери</dt><dd>2.4 коробки из 5 при бортах 34 px; 1.0 при бортах 58 px</dd>
+        <dt>Как избежать</dt><dd>уехать в сторону или сменить рельсу — бомба чужой рельсы пролетает сквозь тележку</dd>
+        <dt>Пропуск</dt><dd>бесплатен, штрафа нет</dd>
+        <dt>Обратная связь</dt><dd>тряска 260 мс, error.ogg на 700 центов ниже, всплывающее «−100 XP»</dd>
+      </dl>
+    </div>
+  </article>
+
+  <div class="note note-danger">
+    <strong>Сила взрыва зависит от места, а не от жребия.</strong> Импульс каждой коробки
+    считается по направлению от эпицентра, затухает с расстоянием и делится на массу: бомба,
+    пойманная левым краем кузова, сносит груз вправо, малую коробку выбивает, большая остаётся.
+    Числа «выбросить N штук» в коде нет — сколько улетит, решает сам разлёт.
+  </div>
+
+  <div class="rail rail-grey"></div>
+  <h2>Заявка на v2 <span class="chip chip-backlog">Бэклог</span></h2>
+  <p class="section-note">Эти четыре пункта закрыты разделом 16 спеки осознанно — MVP держит
+    одну систему бустов, а не четыре. Параметры ниже <em>предложены</em> для будущего разговора:
+    в коде их нет, в спеке их нет, и вводить их без отдельного решения нельзя.</p>
+
+  <article class="item muted">
+    <div class="item-art">
+      <div class="art-col">
+        <div class="glyph glyph-ghost"><span>Щ</span></div>
+        <span class="art-tag">предложение</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <div class="item-head">
+        <h3>Щит</h3>
+        <span class="sku">BST-SHIELD</span>
+        <span class="chip chip-backlog">Бэклог v2</span>
+      </div>
+      <p class="purpose">Снимает разовое наказание: следующая пойманная бомба не взрывается.
+        Смысл — дать игроку рискнуть и покопить дольше обычного.</p>
+      <dl class="spec">
+        <dt>Предлагаемый эффект</dt><dd>поглощает один взрыв целиком: ни XP, ни разлёта</dd>
+        <dt>Активация</dt><dd>подобрать; действует пассивно до срабатывания</dd>
+        <dt>Длительность</dt><dd>до первой бомбы или до конца забега</dd>
+        <dt>Ограничение</dt><dd>не накапливается: второй щит поверх первого ничего не даёт</dd>
+        <dt>Риск дизайна</dt><dd>убирает главное напряжение — «копить или сдать»; нужен редкий спавн</dd>
+      </dl>
+    </div>
+  </article>
+
+  <article class="item muted">
+    <div class="item-art">
+      <div class="art-col">
+        <div class="glyph glyph-ghost"><span>У</span></div>
+        <span class="art-tag">предложение</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <div class="item-head">
+        <h3>Ускорение</h3>
+        <span class="sku">BST-SPEED</span>
+        <span class="chip chip-backlog">Бэклог v2</span>
+      </div>
+      <p class="purpose">Тележка едет быстрее — успеваешь к коробкам на другом краю экрана.</p>
+      <dl class="spec">
+        <dt>Предлагаемый эффект</dt><dd>+40 % к скорости хода</dd>
+        <dt>Активация</dt><dd>подобрать</dd>
+        <dt>Длительность</dt><dd>8 с, с обратным отсчётом в углу</dd>
+        <dt>Ограничение</dt><dd>разгон бьёт по грузу: быстрее едешь — сильнее рывок при развороте</dd>
+        <dt>Риск дизайна</dt><dd>физика груза калибрована под текущий speedMax; ускорение ломает калибровку</dd>
+      </dl>
+    </div>
+  </article>
+
+  <article class="item muted">
+    <div class="item-art">
+      <div class="art-col">
+        <div class="glyph glyph-ghost"><span>З</span></div>
+        <span class="art-tag">предложение</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <div class="item-head">
+        <h3>Замедление времени</h3>
+        <span class="sku">BST-SLOW</span>
+        <span class="chip chip-backlog">Бэклог v2</span>
+      </div>
+      <p class="purpose">Падающие объекты летят медленнее — передышка на потолке разгона.</p>
+      <dl class="spec">
+        <dt>Предлагаемый эффект</dt><dd>−40 % к скорости падения</dd>
+        <dt>Активация</dt><dd>подобрать</dd>
+        <dt>Длительность</dt><dd>6 с</dd>
+        <dt>Ограничение</dt><dd>темп спавна не меняется — объектов в воздухе становится больше</dd>
+        <dt>Риск дизайна</dt><dd>самый дорогой из четырёх: требует масштабирования всей физики, а не одного числа</dd>
+      </dl>
+    </div>
+  </article>
+
+  <article class="item muted">
+    <div class="item-art">
+      <div class="art-col">
+        <div class="glyph glyph-ghost"><span>С</span></div>
+        <span class="art-tag">предложение</span>
+      </div>
+    </div>
+    <div class="item-body">
+      <div class="item-head">
+        <h3>Слизь</h3>
+        <span class="sku">HZD-SLIME</span>
+        <span class="chip chip-backlog">Бэклог v2</span>
+      </div>
+      <p class="purpose">Вторая помеха из исходной концепции: пачкает кузов и мешает грузу лежать.</p>
+      <dl class="spec">
+        <dt>Предлагаемый эффект</dt><dd>трение дна падает — штабель сползает при любом манёвре</dd>
+        <dt>Активация</dt><dd>поймать; смывается сдачей груза</dd>
+        <dt>Длительность</dt><dd>до следующей сдачи</dd>
+        <dt>Риск дизайна</dt><dd>бьёт по той же системе, что и бомба, но менее читаемо: игрок не понимает, почему груз поехал</dd>
+      </dl>
+    </div>
+  </article>
+
+  <div class="note note-warn">
+    <strong>Почему они отложены, а не забыты.</strong> Раздел 16 спеки прямо перечисляет щит,
+    ускорение и замедление времени как исключённые из MVP, а слизь — как исключённую помеху.
+    Причина одна: в игре уже четыре системы (физика, бомбы, буст, магазин), и пятая делает
+    баланс непроверяемым. Возвращаться к списку — после того, как текущие четыре откалиброваны.
+  </div>
+
+  <div class="rail rail-green"></div>
+  <h2>Сводка</h2>
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Артикул</th><th>Название</th><th>Эффект</th><th>Длительность</th><th>Появление</th><th>Статус</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="mono">BST-XP</td><td>Восстановление XP</td><td>+150 XP</td><td>мгновенно</td><td>каждые 25 с</td><td><span class="chip chip-live">В игре</span></td></tr>
+        <tr><td class="mono">HZD-BOMB</td><td>Бомба</td><td>−100 XP + разлёт груза</td><td>мгновенно</td><td>12 % с 30-й с</td><td><span class="chip chip-danger">Помеха</span></td></tr>
+        <tr><td class="mono">BST-SHIELD</td><td>Щит</td><td>гасит один взрыв</td><td>до срабатывания</td><td>—</td><td><span class="chip chip-backlog">Бэклог v2</span></td></tr>
+        <tr><td class="mono">BST-SPEED</td><td>Ускорение</td><td>+40 % к скорости</td><td>8 с</td><td>—</td><td><span class="chip chip-backlog">Бэклог v2</span></td></tr>
+        <tr><td class="mono">BST-SLOW</td><td>Замедление</td><td>−40 % к падению</td><td>6 с</td><td>—</td><td><span class="chip chip-backlog">Бэклог v2</span></td></tr>
+        <tr><td class="mono">HZD-SLIME</td><td>Слизь</td><td>падает трение дна</td><td>до сдачи</td><td>—</td><td><span class="chip chip-backlog">Бэклог v2</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <footer>
+    Cart Rush · docs/reference/boosters.html · В игре — числа из CONFIG на 17.08.2026 ·
+    Бэклог — предложения, требуют отдельного решения и правки раздела 16
+  </footer>
+
+</div>
