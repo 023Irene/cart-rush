@@ -434,6 +434,16 @@ function drawKeyHints(scene, centerX, topY) {
   });
 }
 
+// Единая точка воспроизведения звука. Если сэмпла нет в кэше, Phaser бросает
+// исключение прямо из обработчика столкновений — оно рвёт цикл
+// requestAnimationFrame, и игра замирает целиком на первой же ловле. Так было
+// при запуске по file://, где сэмплы не грузятся вовсе (CORS). Проверка кэша
+// делает отсутствие звука безобидным: игра идёт молча
+function playSfx(scene, key, config) {
+  if (!scene.cache.audio.exists(key)) return;
+  scene.sound.play(key, config);
+}
+
 /* ============================================================================
    BootScene — генерирует текстуры и уходит в меню
    ========================================================================= */
@@ -441,8 +451,15 @@ class BootScene extends Phaser.Scene {
   constructor() { super('BootScene'); }
 
   // Звуки грузятся через fetch, поэтому игра работает только по http://
-  // (Live Server), а не двойным кликом по файлу — CORS, см. ADR-0001
+  // (Live Server), а не двойным кликом по файлу — CORS, см. ADR-0001.
+  // По file:// игра теперь не падает, а идёт молча, но об этом надо сказать вслух:
+  // молчащая игра без объяснения выглядит как поломка звука
   preload() {
+    this.load.on('loaderror', file => console.warn(
+      `[Cart Rush] Не загрузился ресурс «${file.key}». Если адрес начинается с file:// — ` +
+      'открой index.html через Live Server: по file:// браузер блокирует загрузку звука ' +
+      '(CORS). Игра пойдёт без звука.'));
+
     this.load.audio('catch', 'assets/audio/catch.ogg');
     this.load.audio('deliver', 'assets/audio/deliver.ogg');
     this.load.audio('error', 'assets/audio/error.ogg');
@@ -1136,7 +1153,7 @@ class GameScene extends Phaser.Scene {
 
     // На полном запасе бустер не даёт ничего, и «+0 XP» выглядело бы как баг
     const gained = this.run.xp - before;
-    this.sound.play('deliver', { detune: CONFIG.audio.boosterDetune });
+    playSfx(this, 'deliver', { detune: CONFIG.audio.boosterDetune });
     this.showBoosterPopup(gained > 0 ? `+${gained} XP` : 'XP полон');
   }
 
@@ -1164,7 +1181,7 @@ class GameScene extends Phaser.Scene {
     const a = CONFIG.audio;
     const step = Math.min(this.cargo.length - 1, a.catchSteps);
 
-    this.sound.play('catch', {
+    playSfx(this, 'catch', {
       volume: a.catchVolume,
       detune: step * a.catchStep + Phaser.Math.Between(-a.catchJitter, a.catchJitter)
     });
@@ -1198,7 +1215,7 @@ class GameScene extends Phaser.Scene {
     this.cargo.forEach(box => box.destroy());
     this.cargo = [];
 
-    this.sound.play('deliver');
+    playSfx(this, 'deliver');
     this.burstParticles(count, tint);
     this.showPopup(`+${gained}`, hex(tint));
   }
@@ -1258,7 +1275,7 @@ class GameScene extends Phaser.Scene {
     if (this.over) return;
     this.over = true;
 
-    this.sound.play('gameover');
+    playSfx(this, 'gameover');
     this.spawnTimer.remove();
     this.boosterTimer.remove();
     this.matter.world.off('collisionstart', this.onCollisionStart, this);
@@ -1285,7 +1302,7 @@ class GameScene extends Phaser.Scene {
   playErrorSound(detune) {
     if (this.time.now - this.lastErrorSound < CONFIG.audio.errorCooldown) return;
     this.lastErrorSound = this.time.now;
-    this.sound.play('error', { detune: detune || 0 });
+    playSfx(this, 'error', { detune: detune || 0 });
   }
 
   flashError() {
@@ -1728,7 +1745,7 @@ class ShopScene extends Phaser.Scene {
     this.save.upgrades[key] = level + 1;
     SaveManager.save(this.save);
 
-    this.sound.play('deliver');
+    playSfx(this, 'deliver');
 
     // Перерисовываем сцену целиком: это проще и надёжнее, чем точечно обновлять
     // цену, кружки и состояние кнопки в трёх строках

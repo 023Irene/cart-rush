@@ -15,7 +15,13 @@ VS Code → правый клик по index.html → Open with Live Server
 ```
 
 Двойной клик по файлу **не работает**: на протоколе `file://` браузер блокирует загрузку аудио
-по CORS. Если расширения Live Server нет — установить `ritwickdey.LiveServer` из Marketplace.
+по CORS — игра откроется молча и напишет об этом в консоль. Если расширения Live Server нет —
+установить `ritwickdey.LiveServer` из Marketplace.
+
+Любое воспроизведение звука идёт через `playSfx(scene, key, config)`, а не через
+`scene.sound.play`: у Phaser `sound.play` с отсутствующим в кэше ключом **бросает исключение**,
+а оно вылетает из обработчика столкновений и рвёт цикл `requestAnimationFrame` — игра замирала
+целиком. `playSfx` сначала проверяет кэш.
 
 ## Зависимости
 
