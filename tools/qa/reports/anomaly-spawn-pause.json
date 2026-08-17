@@ -1,0 +1,375 @@
+{
+  "label": "spawn-pause",
+  "date": "2026-08-17T10:37:09.800Z",
+  "rows": [
+    {
+      "seed": 33,
+      "timeline": [
+        {
+          "elapsed": 1522,
+          "cargo": 10,
+          "falling": 0,
+          "spawnPaused": true,
+          "boosterPaused": true,
+          "lastRamp": 0,
+          "interval": 1400
+        },
+        {
+          "elapsed": 3533,
+          "cargo": 10,
+          "falling": 0,
+          "spawnPaused": true,
+          "boosterPaused": true,
+          "lastRamp": 0,
+          "interval": 1400
+        },
+        {
+          "elapsed": 5544,
+          "cargo": 10,
+          "falling": 0,
+          "spawnPaused": true,
+          "boosterPaused": true,
+          "lastRamp": 0,
+          "interval": 1400
+        },
+        {
+          "elapsed": 7561,
+          "cargo": 10,
+          "falling": 0,
+          "spawnPaused": true,
+          "boosterPaused": true,
+          "lastRamp": 0,
+          "interval": 1400
+        },
+        {
+          "elapsed": 9572,
+          "cargo": 10,
+          "falling": 0,
+          "spawnPaused": true,
+          "boosterPaused": true,
+          "lastRamp": 0,
+          "interval": 1400
+        },
+        {
+          "elapsed": 11577,
+          "cargo": 10,
+          "falling": 0,
+          "spawnPaused": true,
+          "boosterPaused": true,
+          "lastRamp": 0,
+          "interval": 1400
+        },
+        {
+          "elapsed": 13594,
+          "cargo": 10,
+          "falling": 0,
+          "spawnPaused": true,
+          "boosterPaused": true,
+          "lastRamp": 0,
+          "interval": 1400
+        },
+        {
+          "elapsed": 15599,
+          "cargo": 10,
+          "falling": 0,
+          "spawnPaused": false,
+          "boosterPaused": true,
+          "lastRamp": 15005,
+          "interval": 1288
+        },
+        {
+          "elapsed": 17603,
+          "cargo": 10,
+          "falling": 2,
+          "spawnPaused": false,
+          "boosterPaused": true,
+          "lastRamp": 15005,
+          "interval": 1288
+        },
+        {
+          "elapsed": 19610,
+          "cargo": 10,
+          "falling": 2,
+          "spawnPaused": false,
+          "boosterPaused": true,
+          "lastRamp": 15005,
+          "interval": 1288
+        },
+        {
+          "elapsed": 21616,
+          "cargo": 12,
+          "falling": 2,
+          "spawnPaused": false,
+          "boosterPaused": true,
+          "lastRamp": 15005,
+          "interval": 1288
+        },
+        {
+          "elapsed": 23621,
+          "cargo": 13,
+          "falling": 1,
+          "spawnPaused": false,
+          "boosterPaused": true,
+          "lastRamp": 15005,
+          "interval": 1288
+        },
+        {
+          "elapsed": 25632,
+          "cargo": 13,
+          "falling": 2,
+          "spawnPaused": false,
+          "boosterPaused": true,
+          "lastRamp": 15005,
+          "interval": 1288
+        }
+      ],
+      "errors": []
+    },
+    {
+      "seed": 44,
+      "timeline": [
+        {
+          "elapsed": 1533,
+          "cargo": 10,
+          "falling": 0,
+          "spawnPaused": true,
+          "boosterPaused": true,
+          "lastRamp": 0,
+          "interval": 1400
+        },
+        {
+          "elapsed": 3544,
+          "cargo": 10,
+          "falling": 0,
+          "spawnPaused": true,
+          "boosterPaused": true,
+          "lastRamp": 0,
+          "interval": 1400
+        },
+        {
+          "elapsed": 5555,
+          "cargo": 10,
+          "falling": 0,
+          "spawnPaused": true,
+          "boosterPaused": true,
+          "lastRamp": 0,
+          "interval": 1400
+        },
+        {
+          "elapsed": 7566,
+          "cargo": 10,
+          "falling": 0,
+          "spawnPaused": true,
+          "boosterPaused": true,
+          "lastRamp": 0,
+          "interval": 1400
+        },
+        {
+          "elapsed": 9577,
+          "cargo": 10,
+          "falling": 0,
+          "spawnPaused": true,
+          "boosterPaused": true,
+          "lastRamp": 0,
+          "interval": 1400
+        },
+        {
+          "elapsed": 11588,
+          "cargo": 10,
+          "falling": 0,
+          "spawnPaused": true,
+          "boosterPaused": true,
+          "lastRamp": 0,
+          "interval": 1400
+        },
+        {
+          "elapsed": 13594,
+          "cargo": 10,
+          "falling": 0,
+          "spawnPaused": true,
+          "boosterPaused": true,
+          "lastRamp": 0,
+          "interval": 1400
+        },
+        {
+          "elapsed": 15610,
+          "cargo": 10,
+          "falling": 0,
+          "spawnPaused": false,
+          "boosterPaused": true,
+          "lastRamp": 15005,
+          "interval": 1288
+        },
+        {
+          "elapsed": 17621,
+          "cargo": 10,
+          "falling": 2,
+          "spawnPaused": false,
+          "boosterPaused": true,
+          "lastRamp": 15005,
+          "interval": 1288
+        },
+        {
+          "elapsed": 19638,
+          "cargo": 10,
+          "falling": 2,
+          "spawnPaused": false,
+          "boosterPaused": true,
+          "lastRamp": 15005,
+          "interval": 1288
+        },
+        {
+          "elapsed": 21638,
+          "cargo": 10,
+          "falling": 3,
+          "spawnPaused": false,
+          "boosterPaused": true,
+          "lastRamp": 15005,
+          "interval": 1288
+        },
+        {
+          "elapsed": 23654,
+          "cargo": 10,
+          "falling": 2,
+          "spawnPaused": false,
+          "boosterPaused": true,
+          "lastRamp": 15005,
+          "interval": 1288
+        },
+        {
+          "elapsed": 25660,
+          "cargo": 10,
+          "falling": 2,
+          "spawnPaused": false,
+          "boosterPaused": true,
+          "lastRamp": 15005,
+          "interval": 1288
+        }
+      ],
+      "errors": []
+    },
+    {
+      "seed": 11,
+      "timeline": [
+        {
+          "elapsed": 1528,
+          "cargo": 10,
+          "falling": 0,
+          "spawnPaused": true,
+          "boosterPaused": true,
+          "lastRamp": 0,
+          "interval": 1400
+        },
+        {
+          "elapsed": 3544,
+          "cargo": 10,
+          "falling": 0,
+          "spawnPaused": true,
+          "boosterPaused": true,
+          "lastRamp": 0,
+          "interval": 1400
+        },
+        {
+          "elapsed": 5561,
+          "cargo": 10,
+          "falling": 0,
+          "spawnPaused": true,
+          "boosterPaused": true,
+          "lastRamp": 0,
+          "interval": 1400
+        },
+        {
+          "elapsed": 7572,
+          "cargo": 10,
+          "falling": 0,
+          "spawnPaused": true,
+          "boosterPaused": true,
+          "lastRamp": 0,
+          "interval": 1400
+        },
+        {
+          "elapsed": 9583,
+          "cargo": 10,
+          "falling": 0,
+          "spawnPaused": true,
+          "boosterPaused": true,
+          "lastRamp": 0,
+          "interval": 1400
+        },
+        {
+          "elapsed": 11588,
+          "cargo": 10,
+          "falling": 0,
+          "spawnPaused": true,
+          "boosterPaused": true,
+          "lastRamp": 0,
+          "interval": 1400
+        },
+        {
+          "elapsed": 13605,
+          "cargo": 10,
+          "falling": 0,
+          "spawnPaused": true,
+          "boosterPaused": true,
+          "lastRamp": 0,
+          "interval": 1400
+        },
+        {
+          "elapsed": 15621,
+          "cargo": 10,
+          "falling": 0,
+          "spawnPaused": false,
+          "boosterPaused": true,
+          "lastRamp": 15005,
+          "interval": 1288
+        },
+        {
+          "elapsed": 17638,
+          "cargo": 10,
+          "falling": 2,
+          "spawnPaused": false,
+          "boosterPaused": true,
+          "lastRamp": 15005,
+          "interval": 1288
+        },
+        {
+          "elapsed": 19649,
+          "cargo": 10,
+          "falling": 2,
+          "spawnPaused": false,
+          "boosterPaused": true,
+          "lastRamp": 15005,
+          "interval": 1288
+        },
+        {
+          "elapsed": 21655,
+          "cargo": 10,
+          "falling": 2,
+          "spawnPaused": false,
+          "boosterPaused": true,
+          "lastRamp": 15005,
+          "interval": 1288
+        },
+        {
+          "elapsed": 23654,
+          "cargo": 10,
+          "falling": 2,
+          "spawnPaused": false,
+          "boosterPaused": true,
+          "lastRamp": 15005,
+          "interval": 1288
+        },
+        {
+          "elapsed": 25665,
+          "cargo": 10,
+          "falling": 3,
+          "spawnPaused": false,
+          "boosterPaused": true,
+          "lastRamp": 15005,
+          "interval": 1288
+        }
+      ],
+      "errors": []
+    }
+  ]
+}

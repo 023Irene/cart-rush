@@ -235,6 +235,15 @@ function initScript({ seed, save }) {
       return s.run.xp;
     },
 
+    // Падающие объекты между постановкой штабеля и замером: изредка таймер
+    // спавна успевал сработать до паузы, и в кузове оказывалась лишняя коробка
+    clearFalling() {
+      const s = this.scene();
+      s.fallingBoxes.forEach(b => b.destroy());
+      s.fallingBoxes = [];
+      return true;
+    },
+
     clearCargo() {
       const s = this.scene();
       s.cargo.forEach(b => b.destroy());
@@ -415,6 +424,7 @@ class Harness {
   state() { return this.qa('snapshot'); }
   pauseSpawn(flag) { return this.qa('pauseSpawn', flag); }
   clearCargo() { return this.qa('clearCargo'); }
+  clearFalling() { return this.qa('clearFalling'); }
   refillXp() { return this.qa('refillXp'); }
   startBot(opts) { return this.qa('startBot', opts); }
   stopBot() { return this.qa('stopBot'); }

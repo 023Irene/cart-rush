@@ -9,13 +9,17 @@
 
 const { launch, saveReport } = require('../harness');
 
-const SEEDS = [101, 202, 303, 404, 505];
+// Забег после правок физики стал длинным, а полный прогон на пяти сидах — долгим.
+// Число сидов и потолок забега задаются аргументами: node economy.js метка 3 180
+const ALL_SEEDS = [101, 202, 303, 404, 505];
 const label = process.argv[2] || 'current';
+const SEEDS = ALL_SEEDS.slice(0, Number(process.argv[3]) || ALL_SEEDS.length);
+const RUN_TIMEOUT = (Number(process.argv[4]) || 300) * 1000;
 
 async function playOnce(seed, unloadAt) {
   const g = await launch({ seed });
   await g.startRun();
-  const result = await g.playRun({ unloadAt, timeoutMs: 300000 });
+  const result = await g.playRun({ unloadAt, timeoutMs: RUN_TIMEOUT });
   const errors = g.errors.slice(0, 3);
   await g.close();
   return { seed, unloadAt, ...result, errors };
@@ -70,7 +74,7 @@ async function main() {
 
   // Контрольная группа: игрок, который сдаёт по 5 коробок — так играли до правок физики
   const cautious = [];
-  for (const seed of SEEDS.slice(0, 3)) {
+  for (const seed of SEEDS.slice(0, 2)) {
     process.stdout.write(`осторожный забег, сид ${seed}... `);
     const r = await playOnce(seed, 5);
     cautious.push(r);

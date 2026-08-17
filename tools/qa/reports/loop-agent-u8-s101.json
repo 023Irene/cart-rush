@@ -1,0 +1,260 @@
+{
+  "unloadAt": 8,
+  "seed": 101,
+  "capSec": 200,
+  "wall": 75,
+  "result": {
+    "score": 3560,
+    "elapsed": 66802,
+    "over": true,
+    "currency": 3560,
+    "bestScore": 3560
+  },
+  "stats": {
+    "unloads": 3,
+    "sizes": [
+      8,
+      8,
+      8
+    ],
+    "railSwitches": 16,
+    "dodges": 0,
+    "drops": 12,
+    "misses": 7
+  },
+  "probe": {
+    "drops": 12,
+    "dropXp": 850,
+    "misses": 7,
+    "missXp": 84,
+    "bombs": 0,
+    "bombXp": 0,
+    "boosters": 2,
+    "boosterXp": 231,
+    "unloads": 3,
+    "unloadPoints": 3560,
+    "log": [
+      [
+        7122,
+        "miss",
+        5
+      ],
+      [
+        13538,
+        "drop",
+        30
+      ],
+      [
+        16016,
+        "unload",
+        1080,
+        8
+      ],
+      [
+        21705,
+        "miss",
+        18
+      ],
+      [
+        24288,
+        "miss",
+        18
+      ],
+      [
+        26771,
+        "miss",
+        10
+      ],
+      [
+        27415,
+        "booster",
+        81
+      ],
+      [
+        28254,
+        "drop",
+        30
+      ],
+      [
+        29271,
+        "miss",
+        5
+      ],
+      [
+        35715,
+        "unload",
+        1080,
+        8
+      ],
+      [
+        39620,
+        "miss",
+        10
+      ],
+      [
+        42137,
+        "drop",
+        150
+      ],
+      [
+        43270,
+        "miss",
+        18
+      ],
+      [
+        47553,
+        "drop",
+        80
+      ],
+      [
+        50137,
+        "drop",
+        30
+      ],
+      [
+        51914,
+        "booster",
+        150
+      ],
+      [
+        52036,
+        "drop",
+        80
+      ],
+      [
+        53453,
+        "drop",
+        80
+      ],
+      [
+        54414,
+        "unload",
+        1400,
+        8
+      ],
+      [
+        57953,
+        "drop",
+        30
+      ],
+      [
+        61103,
+        "drop",
+        80
+      ],
+      [
+        65136,
+        "drop",
+        30
+      ],
+      [
+        65186,
+        "drop",
+        150
+      ],
+      [
+        66802,
+        "drop",
+        80
+      ]
+    ]
+  },
+  "slices": [
+    {
+      "sec": 15,
+      "alive": true,
+      "elapsed": 15683,
+      "score": 0,
+      "xp": 665,
+      "maxXp": 700,
+      "cargo": 7,
+      "falling": 1,
+      "drops": 1,
+      "dropXp": 30,
+      "misses": 1,
+      "missXp": 5,
+      "bombs": 0,
+      "bombXp": 0,
+      "boosters": 0,
+      "boosterXp": 0,
+      "unloads": 0,
+      "unloadPoints": 0
+    },
+    {
+      "sec": 30,
+      "alive": true,
+      "elapsed": 30699,
+      "score": 1080,
+      "xp": 665,
+      "maxXp": 700,
+      "cargo": 5,
+      "falling": 1,
+      "drops": 2,
+      "dropXp": 60,
+      "misses": 5,
+      "missXp": 56,
+      "bombs": 0,
+      "bombXp": 0,
+      "boosters": 1,
+      "boosterXp": 81,
+      "unloads": 1,
+      "unloadPoints": 1080
+    },
+    {
+      "sec": 45,
+      "alive": true,
+      "elapsed": 45709,
+      "score": 2160,
+      "xp": 487,
+      "maxXp": 700,
+      "cargo": 5,
+      "falling": 1,
+      "drops": 3,
+      "dropXp": 210,
+      "misses": 7,
+      "missXp": 84,
+      "bombs": 0,
+      "bombXp": 0,
+      "boosters": 1,
+      "boosterXp": 81,
+      "unloads": 2,
+      "unloadPoints": 2160
+    },
+    {
+      "sec": 60,
+      "alive": true,
+      "elapsed": 60731,
+      "score": 3560,
+      "xp": 337,
+      "maxXp": 700,
+      "cargo": 4,
+      "falling": 1,
+      "drops": 8,
+      "dropXp": 510,
+      "misses": 7,
+      "missXp": 84,
+      "bombs": 0,
+      "bombXp": 0,
+      "boosters": 2,
+      "boosterXp": 231,
+      "unloads": 3,
+      "unloadPoints": 3560
+    },
+    {
+      "sec": 75,
+      "alive": false,
+      "cargo": 0,
+      "drops": 12,
+      "dropXp": 850,
+      "misses": 7,
+      "missXp": 84,
+      "bombs": 0,
+      "bombXp": 0,
+      "boosters": 2,
+      "boosterXp": 231,
+      "unloads": 3,
+      "unloadPoints": 3560
+    }
+  ],
+  "errors": []
+}

@@ -1,0 +1,732 @@
+{
+  "unloadAt": 4,
+  "seed": 101,
+  "capSec": 200,
+  "wall": 180,
+  "result": {
+    "score": 11000,
+    "elapsed": 175664,
+    "over": true,
+    "currency": 11000,
+    "bestScore": 11000
+  },
+  "stats": {
+    "unloads": 34,
+    "sizes": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4
+    ],
+    "railSwitches": 68,
+    "dodges": 30,
+    "drops": 12,
+    "misses": 25
+  },
+  "probe": {
+    "drops": 12,
+    "dropXp": 920,
+    "misses": 25,
+    "missXp": 209,
+    "bombs": 2,
+    "bombXp": 200,
+    "boosters": 5,
+    "boosterXp": 620,
+    "unloads": 34,
+    "unloadPoints": 11000,
+    "log": [
+      [
+        7122,
+        "miss",
+        5
+      ],
+      [
+        9461,
+        "unload",
+        220,
+        4
+      ],
+      [
+        15505,
+        "miss",
+        5
+      ],
+      [
+        16766,
+        "unload",
+        340,
+        4
+      ],
+      [
+        22266,
+        "unload",
+        280,
+        4
+      ],
+      [
+        26771,
+        "miss",
+        10
+      ],
+      [
+        27499,
+        "booster",
+        20
+      ],
+      [
+        28071,
+        "miss",
+        10
+      ],
+      [
+        30365,
+        "unload",
+        320,
+        4
+      ],
+      [
+        34815,
+        "bomb",
+        100
+      ],
+      [
+        35287,
+        "drop",
+        150
+      ],
+      [
+        37254,
+        "miss",
+        10
+      ],
+      [
+        39615,
+        "unload",
+        220,
+        4
+      ],
+      [
+        43120,
+        "miss",
+        5
+      ],
+      [
+        44715,
+        "unload",
+        440,
+        4
+      ],
+      [
+        50487,
+        "miss",
+        5
+      ],
+      [
+        51414,
+        "unload",
+        540,
+        4
+      ],
+      [
+        52331,
+        "booster",
+        150
+      ],
+      [
+        53086,
+        "drop",
+        30
+      ],
+      [
+        53853,
+        "miss",
+        10
+      ],
+      [
+        55636,
+        "drop",
+        80
+      ],
+      [
+        58620,
+        "unload",
+        320,
+        4
+      ],
+      [
+        61286,
+        "miss",
+        5
+      ],
+      [
+        64036,
+        "miss",
+        5
+      ],
+      [
+        66769,
+        "unload",
+        500,
+        4
+      ],
+      [
+        72013,
+        "unload",
+        280,
+        4
+      ],
+      [
+        74769,
+        "drop",
+        150
+      ],
+      [
+        76647,
+        "booster",
+        150
+      ],
+      [
+        78619,
+        "unload",
+        440,
+        4
+      ],
+      [
+        82385,
+        "miss",
+        5
+      ],
+      [
+        83268,
+        "unload",
+        220,
+        4
+      ],
+      [
+        87968,
+        "unload",
+        380,
+        4
+      ],
+      [
+        94068,
+        "unload",
+        380,
+        4
+      ],
+      [
+        96834,
+        "miss",
+        10
+      ],
+      [
+        97329,
+        "bomb",
+        100
+      ],
+      [
+        97468,
+        "drop",
+        80
+      ],
+      [
+        97534,
+        "drop",
+        30
+      ],
+      [
+        99251,
+        "drop",
+        30
+      ],
+      [
+        101118,
+        "miss",
+        18
+      ],
+      [
+        101595,
+        "booster",
+        150
+      ],
+      [
+        101868,
+        "miss",
+        5
+      ],
+      [
+        103517,
+        "unload",
+        380,
+        4
+      ],
+      [
+        104251,
+        "drop",
+        150
+      ],
+      [
+        108101,
+        "miss",
+        5
+      ],
+      [
+        109567,
+        "unload",
+        280,
+        4
+      ],
+      [
+        115217,
+        "unload",
+        220,
+        4
+      ],
+      [
+        118967,
+        "miss",
+        5
+      ],
+      [
+        119811,
+        "unload",
+        220,
+        4
+      ],
+      [
+        122554,
+        "unload",
+        280,
+        4
+      ],
+      [
+        124155,
+        "drop",
+        80
+      ],
+      [
+        126344,
+        "booster",
+        150
+      ],
+      [
+        126700,
+        "miss",
+        5
+      ],
+      [
+        127116,
+        "unload",
+        160,
+        4
+      ],
+      [
+        130516,
+        "unload",
+        220,
+        4
+      ],
+      [
+        131366,
+        "drop",
+        80
+      ],
+      [
+        133766,
+        "drop",
+        30
+      ],
+      [
+        135099,
+        "miss",
+        10
+      ],
+      [
+        136966,
+        "unload",
+        220,
+        4
+      ],
+      [
+        140066,
+        "unload",
+        220,
+        4
+      ],
+      [
+        143632,
+        "miss",
+        18
+      ],
+      [
+        144216,
+        "unload",
+        160,
+        4
+      ],
+      [
+        146865,
+        "unload",
+        220,
+        4
+      ],
+      [
+        149415,
+        "unload",
+        440,
+        4
+      ],
+      [
+        152432,
+        "miss",
+        10
+      ],
+      [
+        153615,
+        "unload",
+        280,
+        4
+      ],
+      [
+        154832,
+        "miss",
+        5
+      ],
+      [
+        156698,
+        "miss",
+        10
+      ],
+      [
+        157165,
+        "unload",
+        380,
+        4
+      ],
+      [
+        160165,
+        "unload",
+        280,
+        4
+      ],
+      [
+        162565,
+        "unload",
+        540,
+        4
+      ],
+      [
+        165331,
+        "drop",
+        30
+      ],
+      [
+        166415,
+        "unload",
+        380,
+        4
+      ],
+      [
+        168814,
+        "unload",
+        160,
+        4
+      ],
+      [
+        170581,
+        "miss",
+        5
+      ],
+      [
+        171414,
+        "unload",
+        540,
+        4
+      ],
+      [
+        172898,
+        "miss",
+        18
+      ],
+      [
+        175114,
+        "unload",
+        540,
+        4
+      ],
+      [
+        175664,
+        "miss",
+        10
+      ]
+    ]
+  },
+  "slices": [
+    {
+      "sec": 15,
+      "alive": true,
+      "elapsed": 15683,
+      "score": 220,
+      "xp": 690,
+      "maxXp": 700,
+      "cargo": 3,
+      "falling": 1,
+      "drops": 0,
+      "dropXp": 0,
+      "misses": 2,
+      "missXp": 10,
+      "bombs": 0,
+      "bombXp": 0,
+      "boosters": 0,
+      "boosterXp": 0,
+      "unloads": 1,
+      "unloadPoints": 220
+    },
+    {
+      "sec": 30,
+      "alive": true,
+      "elapsed": 30688,
+      "score": 1160,
+      "xp": 690,
+      "maxXp": 700,
+      "cargo": 0,
+      "falling": 1,
+      "drops": 0,
+      "dropXp": 0,
+      "misses": 4,
+      "missXp": 30,
+      "bombs": 0,
+      "bombXp": 0,
+      "boosters": 1,
+      "boosterXp": 20,
+      "unloads": 4,
+      "unloadPoints": 1160
+    },
+    {
+      "sec": 45,
+      "alive": true,
+      "elapsed": 45703,
+      "score": 1820,
+      "xp": 425,
+      "maxXp": 700,
+      "cargo": 0,
+      "falling": 1,
+      "drops": 1,
+      "dropXp": 150,
+      "misses": 6,
+      "missXp": 45,
+      "bombs": 1,
+      "bombXp": 100,
+      "boosters": 1,
+      "boosterXp": 20,
+      "unloads": 6,
+      "unloadPoints": 1820
+    },
+    {
+      "sec": 60,
+      "alive": true,
+      "elapsed": 60719,
+      "score": 2680,
+      "xp": 450,
+      "maxXp": 700,
+      "cargo": 1,
+      "falling": 1,
+      "drops": 3,
+      "dropXp": 260,
+      "misses": 8,
+      "missXp": 60,
+      "bombs": 1,
+      "bombXp": 100,
+      "boosters": 2,
+      "boosterXp": 170,
+      "unloads": 8,
+      "unloadPoints": 2680
+    },
+    {
+      "sec": 75,
+      "alive": true,
+      "elapsed": 75780,
+      "score": 3460,
+      "xp": 290,
+      "maxXp": 700,
+      "cargo": 2,
+      "falling": 1,
+      "drops": 4,
+      "dropXp": 410,
+      "misses": 10,
+      "missXp": 70,
+      "bombs": 1,
+      "bombXp": 100,
+      "boosters": 2,
+      "boosterXp": 170,
+      "unloads": 10,
+      "unloadPoints": 3460
+    },
+    {
+      "sec": 90,
+      "alive": true,
+      "elapsed": 90796,
+      "score": 4500,
+      "xp": 435,
+      "maxXp": 700,
+      "cargo": 2,
+      "falling": 1,
+      "drops": 4,
+      "dropXp": 410,
+      "misses": 11,
+      "missXp": 75,
+      "bombs": 1,
+      "bombXp": 100,
+      "boosters": 3,
+      "boosterXp": 320,
+      "unloads": 13,
+      "unloadPoints": 4500
+    },
+    {
+      "sec": 105,
+      "alive": true,
+      "elapsed": 105806,
+      "score": 5260,
+      "xp": 162,
+      "maxXp": 700,
+      "cargo": 1,
+      "falling": 1,
+      "drops": 8,
+      "dropXp": 700,
+      "misses": 14,
+      "missXp": 108,
+      "bombs": 2,
+      "bombXp": 200,
+      "boosters": 4,
+      "boosterXp": 470,
+      "unloads": 15,
+      "unloadPoints": 5260
+    },
+    {
+      "sec": 120,
+      "alive": true,
+      "elapsed": 120817,
+      "score": 5980,
+      "xp": 152,
+      "maxXp": 700,
+      "cargo": 1,
+      "falling": 2,
+      "drops": 8,
+      "dropXp": 700,
+      "misses": 16,
+      "missXp": 118,
+      "bombs": 2,
+      "bombXp": 200,
+      "boosters": 4,
+      "boosterXp": 470,
+      "unloads": 18,
+      "unloadPoints": 5980
+    },
+    {
+      "sec": 135,
+      "alive": true,
+      "elapsed": 135883,
+      "score": 6640,
+      "xp": 97,
+      "maxXp": 700,
+      "cargo": 3,
+      "falling": 1,
+      "drops": 11,
+      "dropXp": 890,
+      "misses": 18,
+      "missXp": 133,
+      "bombs": 2,
+      "bombXp": 200,
+      "boosters": 5,
+      "boosterXp": 620,
+      "unloads": 21,
+      "unloadPoints": 6640
+    },
+    {
+      "sec": 150,
+      "alive": true,
+      "elapsed": 150899,
+      "score": 7900,
+      "xp": 79,
+      "maxXp": 700,
+      "cargo": 1,
+      "falling": 2,
+      "drops": 11,
+      "dropXp": 890,
+      "misses": 19,
+      "missXp": 151,
+      "bombs": 2,
+      "bombXp": 200,
+      "boosters": 5,
+      "boosterXp": 620,
+      "unloads": 26,
+      "unloadPoints": 7900
+    },
+    {
+      "sec": 165,
+      "alive": true,
+      "elapsed": 165915,
+      "score": 9380,
+      "xp": 24,
+      "maxXp": 700,
+      "cargo": 3,
+      "falling": 1,
+      "drops": 12,
+      "dropXp": 920,
+      "misses": 22,
+      "missXp": 176,
+      "bombs": 2,
+      "bombXp": 200,
+      "boosters": 5,
+      "boosterXp": 620,
+      "unloads": 30,
+      "unloadPoints": 9380
+    },
+    {
+      "sec": 180,
+      "alive": false,
+      "cargo": 0,
+      "drops": 12,
+      "dropXp": 920,
+      "misses": 25,
+      "missXp": 209,
+      "bombs": 2,
+      "bombXp": 200,
+      "boosters": 5,
+      "boosterXp": 620,
+      "unloads": 34,
+      "unloadPoints": 11000
+    }
+  ],
+  "errors": []
+}

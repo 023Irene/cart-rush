@@ -1,0 +1,284 @@
+{
+  "summary": {
+    "label": "sticky-bot",
+    "date": "2026-08-17T10:21:01.878Z",
+    "bot8": {
+      "runs": 5,
+      "score": 3360,
+      "scoreMin": 1200,
+      "scoreMax": 5720,
+      "seconds": 50.1,
+      "unloads": 2.4,
+      "avgUnloadSize": 8,
+      "maxUnloadSize": 8,
+      "dodges": 4.8,
+      "drops": 10,
+      "misses": 2.4,
+      "timedOut": 0
+    },
+    "bot5": {
+      "runs": 3,
+      "score": 7833,
+      "scoreMin": 4150,
+      "scoreMax": 10825,
+      "seconds": 114.5,
+      "unloads": 15,
+      "avgUnloadSize": 5,
+      "maxUnloadSize": 5,
+      "dodges": 25,
+      "drops": 10.7,
+      "misses": 8.3,
+      "timedOut": 0
+    },
+    "currentPrices": [
+      [
+        3000,
+        9000,
+        24000
+      ],
+      [
+        4800,
+        12000,
+        30000
+      ],
+      [
+        6000,
+        18000
+      ]
+    ],
+    "currentProgression": {
+      "firstBuyAfterRun": 1,
+      "allBoughtAfterRun": 32,
+      "total": 106800
+    },
+    "proportionSum": 17800,
+    "wantedMultiplier": 2,
+    "proposedPrices": [
+      [
+        1000,
+        3000,
+        8000
+      ],
+      [
+        1600,
+        4000,
+        10000
+      ],
+      [
+        2000,
+        6000
+      ]
+    ],
+    "proposedProgression": {
+      "firstBuyAfterRun": 1,
+      "allBoughtAfterRun": 11,
+      "total": 35600
+    },
+    "errors": []
+  },
+  "rows": [
+    {
+      "seed": 101,
+      "unloadAt": 8,
+      "score": 5720,
+      "elapsed": 63814,
+      "over": true,
+      "currency": 5720,
+      "bestScore": 5720,
+      "unloads": 4,
+      "sizes": [
+        8,
+        8,
+        8,
+        8
+      ],
+      "railSwitches": 19,
+      "dodges": 0,
+      "drops": 11,
+      "misses": 3,
+      "timedOut": false,
+      "errors": []
+    },
+    {
+      "seed": 202,
+      "unloadAt": 8,
+      "score": 3040,
+      "elapsed": 44004,
+      "over": true,
+      "currency": 3040,
+      "bestScore": 3040,
+      "unloads": 2,
+      "sizes": [
+        8,
+        8
+      ],
+      "railSwitches": 15,
+      "dodges": 1,
+      "drops": 11,
+      "misses": 1,
+      "timedOut": false,
+      "errors": []
+    },
+    {
+      "seed": 303,
+      "unloadAt": 8,
+      "score": 3200,
+      "elapsed": 48792,
+      "over": true,
+      "currency": 3200,
+      "bestScore": 3200,
+      "unloads": 2,
+      "sizes": [
+        8,
+        8
+      ],
+      "railSwitches": 22,
+      "dodges": 0,
+      "drops": 12,
+      "misses": 0,
+      "timedOut": false,
+      "errors": []
+    },
+    {
+      "seed": 404,
+      "unloadAt": 8,
+      "score": 1200,
+      "elapsed": 33554,
+      "over": true,
+      "currency": 1200,
+      "bestScore": 1200,
+      "unloads": 1,
+      "sizes": [
+        8
+      ],
+      "railSwitches": 10,
+      "dodges": 5,
+      "drops": 9,
+      "misses": 1,
+      "timedOut": false,
+      "errors": []
+    },
+    {
+      "seed": 505,
+      "unloadAt": 8,
+      "score": 3640,
+      "elapsed": 60436,
+      "over": true,
+      "currency": 3640,
+      "bestScore": 3640,
+      "unloads": 3,
+      "sizes": [
+        8,
+        8,
+        8
+      ],
+      "railSwitches": 15,
+      "dodges": 18,
+      "drops": 7,
+      "misses": 7,
+      "timedOut": false,
+      "errors": []
+    }
+  ],
+  "cautious": [
+    {
+      "seed": 101,
+      "unloadAt": 5,
+      "score": 4150,
+      "elapsed": 75124,
+      "over": true,
+      "currency": 4150,
+      "bestScore": 4150,
+      "unloads": 8,
+      "sizes": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "railSwitches": 26,
+      "dodges": 13,
+      "drops": 10,
+      "misses": 3,
+      "timedOut": false,
+      "errors": []
+    },
+    {
+      "seed": 202,
+      "unloadAt": 5,
+      "score": 8525,
+      "elapsed": 125866,
+      "over": true,
+      "currency": 8525,
+      "bestScore": 8525,
+      "unloads": 16,
+      "sizes": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "railSwitches": 43,
+      "dodges": 31,
+      "drops": 13,
+      "misses": 10,
+      "timedOut": false,
+      "errors": []
+    },
+    {
+      "seed": 303,
+      "unloadAt": 5,
+      "score": 10825,
+      "elapsed": 142549,
+      "over": true,
+      "currency": 10825,
+      "bestScore": 10825,
+      "unloads": 21,
+      "sizes": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "railSwitches": 52,
+      "dodges": 31,
+      "drops": 9,
+      "misses": 12,
+      "timedOut": false,
+      "errors": []
+    }
+  ]
+}

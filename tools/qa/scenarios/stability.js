@@ -18,6 +18,7 @@ async function measure(g, { size, count, action }) {
   await g.refillXp();
   await g.stack(size, count);
   await g.wait(900);                 // штабель оседает
+  await g.clearFalling();
 
   const settled = await g.state();
   await action(g);
@@ -41,6 +42,7 @@ async function drift(g, size, count, ms) {
   await g.refillXp();
   await g.stack(size, count);
   await g.wait(900);
+  await g.clearFalling();
 
   const before = await g.state();
   await g.wait(ms);

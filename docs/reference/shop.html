@@ -1,0 +1,445 @@
+<title>Магазин Cart Rush</title>
+
+<style>
+  :root {
+    --ground: #eceef1; --surface: #f7f8fa; --raised: #ffffff; --line: #cfd4da;
+    --text: #1c1f23; --dim: #5d646d; --faint: #878e97;
+    --blue: #2f62b4; --blue-solid: #3d7ad6; --yellow: #8d6210; --yellow-solid: #e8b33a;
+    --danger: #b93a3a; --danger-solid: #d64545; --green: #3f8f57; --green-solid: #5fbf7a;
+    --cart: #7a7f87; --cart-dark: #5c626b; --field: #33363b;
+    --shadow: 0 1px 2px rgba(20,24,28,.08), 0 8px 24px rgba(20,24,28,.06);
+    --grid: rgba(28,31,35,.05);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #1a1d21; --surface: #24272c; --raised: #2b2e33; --line: #3a3e45;
+      --text: #e8eaed; --dim: #9aa0a8; --faint: #6f767f;
+      --blue: #6b9dea; --blue-solid: #3d7ad6; --yellow: #e8b33a; --yellow-solid: #e8b33a;
+      --danger: #e06060; --danger-solid: #d64545; --green: #5fbf7a; --green-solid: #5fbf7a;
+      --cart: #7a7f87; --cart-dark: #5c626b; --field: #2b2e33;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.3);
+      --grid: rgba(232,234,237,.045);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #1a1d21; --surface: #24272c; --raised: #2b2e33; --line: #3a3e45;
+    --text: #e8eaed; --dim: #9aa0a8; --faint: #6f767f;
+    --blue: #6b9dea; --blue-solid: #3d7ad6; --yellow: #e8b33a; --yellow-solid: #e8b33a;
+    --danger: #e06060; --danger-solid: #d64545; --green: #5fbf7a; --green-solid: #5fbf7a;
+    --cart: #7a7f87; --cart-dark: #5c626b; --field: #2b2e33;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.3);
+    --grid: rgba(232,234,237,.045);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0; background: var(--ground);
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px),
+                      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 32px 32px;
+    color: var(--text);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size: 16px; line-height: 1.6;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 48px 24px 96px; }
+
+  h1, h2, h3 {
+    font-family: Bahnschrift, "DIN Alternate", "Segoe UI Semibold", "Segoe UI", sans-serif;
+    font-weight: 600; text-wrap: balance; letter-spacing: .01em;
+  }
+  code, .mono, .num { font-family: "Cascadia Mono", Consolas, ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+  header { border-bottom: 2px solid var(--text); padding-bottom: 20px; }
+  .eyebrow {
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--faint); margin: 0 0 10px;
+  }
+  h1 { font-size: clamp(34px, 6vw, 54px); line-height: 1.05; margin: 0 0 12px; }
+  .lede { font-size: 18px; color: var(--dim); max-width: 62ch; margin: 0; }
+  .meta {
+    display: flex; flex-wrap: wrap; gap: 8px 28px; font-size: 13px; color: var(--faint);
+    margin: 20px 0 0; font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+  }
+
+  .rail { height: 6px; border-radius: 3px; margin: 56px 0 28px; position: relative; }
+  .rail::after {
+    content: ""; position: absolute; inset: 0; border-radius: 3px;
+    background: repeating-linear-gradient(90deg, transparent 0 18px, rgba(0,0,0,.28) 18px 26px);
+  }
+  .rail-yellow { background: var(--yellow-solid); }
+  .rail-blue { background: var(--blue-solid); }
+  .rail-grey { background: var(--cart); }
+
+  h2 { font-size: 27px; margin: 0 0 6px; }
+  h3 { font-size: 20px; margin: 0; }
+  .section-note { color: var(--dim); margin: 0 0 26px; max-width: 66ch; }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+    padding: 3px 9px; border-radius: 3px; border: 1px solid; white-space: nowrap;
+  }
+  .chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .chip-live { color: var(--green); border-color: color-mix(in srgb, var(--green) 45%, transparent); }
+  .chip-none { color: var(--faint); border-color: var(--line); }
+  .chip-new { color: var(--yellow); border-color: color-mix(in srgb, var(--yellow) 50%, transparent); border-style: dashed; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; margin: 22px 0 0; }
+  .legend .txt { font-size: 13px; color: var(--dim); }
+
+  /* ---------- строка улучшения ---------- */
+  .upg {
+    background: var(--raised); border: 1px solid var(--line); border-radius: 6px;
+    box-shadow: var(--shadow); overflow: hidden; margin-bottom: 20px;
+  }
+  .upg-head {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    gap: 10px 16px; padding: 15px 20px; border-bottom: 1px solid var(--line); background: var(--surface);
+  }
+  .upg-name { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 14px; }
+  .sku { font-family: "Cascadia Mono", Consolas, ui-monospace, monospace; font-size: 12px; letter-spacing: .08em; color: var(--faint); }
+
+  .pips { display: inline-flex; gap: 6px; align-items: center; }
+  .pip { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--cart); }
+  .pip.on { background: var(--green-solid); border-color: var(--green-solid); }
+
+  .upg-body { padding: 18px 20px 20px; display: grid; gap: 20px; grid-template-columns: 1fr 300px; }
+  @media (max-width: 760px) { .upg-body { grid-template-columns: 1fr; } }
+
+  .levels { border: 1px solid var(--line); border-radius: 5px; overflow: hidden; }
+  .lvl {
+    display: grid; grid-template-columns: 62px 1fr auto auto; gap: 12px; align-items: center;
+    padding: 9px 14px; border-bottom: 1px solid var(--line); font-size: 14px;
+  }
+  .lvl:last-child { border-bottom: none; }
+  .lvl-label {
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    font-size: 11px; letter-spacing: .09em; text-transform: uppercase; color: var(--faint);
+  }
+  .lvl-val { font-family: "Cascadia Mono", Consolas, ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+  .lvl-price { font-family: "Cascadia Mono", Consolas, ui-monospace, monospace; color: var(--yellow); font-variant-numeric: tabular-nums; }
+  .lvl-runs { font-size: 12px; color: var(--faint); font-family: "Cascadia Mono", Consolas, ui-monospace, monospace; }
+  .lvl.base { background: var(--surface); }
+
+  /* визуал «до / после» — тележка в реальных пропорциях */
+  .compare { display: flex; gap: 18px; align-items: flex-end; justify-content: center;
+             background: var(--field); border-radius: 5px; padding: 20px 14px 16px; }
+  .cart-mini { position: relative; }
+  .cart-mini .floor { width: 100px; height: 6px; background: var(--cart); }
+  .cart-mini .wall { position: absolute; width: 6px; background: var(--cart-dark); bottom: 6px; }
+  .cart-mini .wall.l { left: 0; }
+  .cart-mini .wall.r { right: 0; }
+  .cart-mini .wheel { position: absolute; width: 9px; height: 9px; border-radius: 50%; background: #24272b; bottom: -4px; }
+  .cart-mini .wheel.l { left: 22px; }
+  .cart-mini .wheel.r { right: 22px; }
+  .cart-mini .cap {
+    display: block; text-align: center; margin-top: 12px;
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace; font-size: 11px; color: #9aa0a8;
+  }
+  .bar-mini { width: 88px; height: 7px; background: rgba(0,0,0,.45); border-radius: 1px; overflow: hidden; margin: 0 auto; }
+  .bar-mini i { display: block; height: 100%; background: var(--green-solid); }
+  .swing { display: grid; place-items: center; gap: 8px; }
+  .arrow { font-size: 18px; color: #9aa0a8; align-self: center; padding-bottom: 26px; }
+
+  .note {
+    border-left: 3px solid var(--yellow-solid); background: var(--surface);
+    padding: 14px 18px; border-radius: 0 5px 5px 0; margin: 22px 0 0; color: var(--dim);
+  }
+  .note strong { color: var(--text); }
+  .note-blue { border-left-color: var(--blue-solid); }
+  .note-danger { border-left-color: var(--danger-solid); }
+
+  .scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--raised); }
+  table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 14px; }
+  th, td { padding: 11px 16px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+  thead th {
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace; font-weight: 400;
+    font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint); background: var(--surface);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.num, th.num { text-align: right; }
+
+  .stats { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 8px; }
+  .stat { background: var(--raised); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; }
+  .stat .k {
+    font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+    font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--faint);
+  }
+  .stat .v { font-family: Bahnschrift, "DIN Alternate", "Segoe UI", sans-serif; font-size: 28px; font-weight: 600; line-height: 1.2; font-variant-numeric: tabular-nums; }
+  .stat .s { font-size: 13px; color: var(--dim); }
+
+  footer {
+    margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line);
+    font-size: 13px; color: var(--faint); font-family: "Cascadia Mono", Consolas, ui-monospace, monospace;
+  }
+  a { color: var(--blue); }
+  a:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">Cart Rush · справочник ассетов · UPG</p>
+    <h1>Магазин улучшений</h1>
+    <p class="lede">Три линейки, восемь покупок, никакой косметики. Цены пересчитаны 17.08.2026
+      под новый доход: замер ботом даёт 7600 очков за забег, поэтому множитель к пропорциям
+      спеки снижен с 6 до 4.</p>
+    <div class="meta">
+      <span>Обновлено 17.08.2026</span>
+      <span>Источник: GAME_SPEC 5.8</span>
+      <span>Замер: tools/qa/reports/economy-soft-physics.json</span>
+    </div>
+  </header>
+
+  <div class="rail rail-yellow"></div>
+  <h2>Доход, из которого выведены цены</h2>
+  <p class="section-note">Монеты — это счёт забега один к одному. Считать цены «на глаз» нельзя:
+    счёт равен сумме ценностей груза, умноженной на его количество, то есть растёт квадратично
+    от размера сдачи.</p>
+
+  <div class="stats">
+    <div class="stat"><div class="k">Доход за забег</div><div class="v">7 560</div><div class="s">разброс 4 240 – 13 080</div></div>
+    <div class="stat"><div class="k">Длина забега</div><div class="v">91 с</div><div class="s">при сдаче по 8 коробок</div></div>
+    <div class="stat"><div class="k">Сумма магазина</div><div class="v">71 200</div><div class="s">было 106 800</div></div>
+    <div class="stat"><div class="k">Полный магазин</div><div class="v">10</div><div class="s">забегов, как задумано</div></div>
+  </div>
+
+  <div class="note note-blue">
+    <strong>Жадный и осторожный зарабатывают одинаково.</strong> Бот, сдающий по 8 коробок,
+    набирает 7560; сдающий по 5 — 7838 за более длинный забег. Значит выбор «копить или сдать»
+    настоящий: копить прибыльнее за сдачу, но короче по забегу, и в сумме выходит то же.
+    Если бы один стиль давал вдвое больше, выбора не было бы.
+  </div>
+
+  <div class="rail rail-blue"></div>
+  <h2>Что продаётся <span class="chip chip-live">В игре</span></h2>
+  <p class="section-note">Все три улучшения механические — они меняют поведение тележки, а не её
+    вид. Уровни покупаются по порядку, цена следующего уровня втрое-вчетверо выше предыдущего.</p>
+
+  <article class="upg">
+    <div class="upg-head">
+      <div class="upg-name">
+        <h3>Высокие борта</h3>
+        <span class="sku">UPG-WALLS</span>
+      </div>
+      <div class="pips" title="3 уровня">
+        <span class="pip on"></span><span class="pip"></span><span class="pip"></span>
+      </div>
+    </div>
+    <div class="upg-body">
+      <div>
+        <div class="levels">
+          <div class="lvl base"><span class="lvl-label">База</span><span>высота борта</span><span class="lvl-val">34 px</span><span class="lvl-runs">—</span></div>
+          <div class="lvl"><span class="lvl-label">Ур. 1</span><span>+8 px</span><span class="lvl-val">42 px</span><span class="lvl-price">2 000</span></div>
+          <div class="lvl"><span class="lvl-label">Ур. 2</span><span>+8 px</span><span class="lvl-val">50 px</span><span class="lvl-price">6 000</span></div>
+          <div class="lvl"><span class="lvl-label">Ур. 3</span><span>+8 px</span><span class="lvl-val">58 px</span><span class="lvl-price">16 000</span></div>
+        </div>
+        <div class="note">
+          <strong>Самая ощутимая покупка в игре.</strong> Борта 58 px режут потери от взрыва бомбы
+          с 2.4 коробки из пяти до 1.0 — то есть вдвое ослабляют главное наказание. Это законная
+          награда за покупку, а не дыра в балансе.
+        </div>
+      </div>
+      <div>
+        <div class="compare">
+          <div class="cart-mini">
+            <div class="wall l" style="height:17px"></div>
+            <div class="wall r" style="height:17px"></div>
+            <div class="floor"></div>
+            <div class="wheel l"></div><div class="wheel r"></div>
+            <span class="cap">34 px</span>
+          </div>
+          <div class="arrow">→</div>
+          <div class="cart-mini">
+            <div class="wall l" style="height:29px"></div>
+            <div class="wall r" style="height:29px"></div>
+            <div class="floor"></div>
+            <div class="wheel l"></div><div class="wheel r"></div>
+            <span class="cap">58 px</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="upg">
+    <div class="upg-head">
+      <div class="upg-name">
+        <h3>Усиленный аккумулятор</h3>
+        <span class="sku">UPG-BATTERY</span>
+      </div>
+      <div class="pips" title="3 уровня">
+        <span class="pip on"></span><span class="pip"></span><span class="pip"></span>
+      </div>
+    </div>
+    <div class="upg-body">
+      <div>
+        <div class="levels">
+          <div class="lvl base"><span class="lvl-label">База</span><span>стартовый XP</span><span class="lvl-val">700</span><span class="lvl-runs">—</span></div>
+          <div class="lvl"><span class="lvl-label">Ур. 1</span><span>+100 XP</span><span class="lvl-val">800</span><span class="lvl-price">3 200</span></div>
+          <div class="lvl"><span class="lvl-label">Ур. 2</span><span>+100 XP</span><span class="lvl-val">900</span><span class="lvl-price">8 000</span></div>
+          <div class="lvl"><span class="lvl-label">Ур. 3</span><span>+100 XP</span><span class="lvl-val">1000</span><span class="lvl-price">20 000</span></div>
+        </div>
+        <div class="note">
+          <strong>Поднимает и запас, и потолок.</strong> XP — это одновременно здоровье и таймер
+          забега, а бустер восстановления не может поднять его выше стартового максимума. Значит
+          аккумулятор удлиняет забег дважды: даёт больше на старте и больше места под
+          восстановление.
+        </div>
+      </div>
+      <div>
+        <div class="compare">
+          <div class="swing">
+            <div class="bar-mini"><i style="width:70%"></i></div>
+            <span class="cap" style="margin:0">700 XP</span>
+          </div>
+          <div class="arrow" style="padding:0">→</div>
+          <div class="swing">
+            <div class="bar-mini"><i style="width:100%"></i></div>
+            <span class="cap" style="margin:0">1000 XP</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <article class="upg">
+    <div class="upg-head">
+      <div class="upg-name">
+        <h3>Мягкая подвеска</h3>
+        <span class="sku">UPG-SUSPENSION</span>
+      </div>
+      <div class="pips" title="2 уровня">
+        <span class="pip on"></span><span class="pip"></span>
+      </div>
+    </div>
+    <div class="upg-body">
+      <div>
+        <div class="levels">
+          <div class="lvl base"><span class="lvl-label">База</span><span>импульс при смене рельсы</span><span class="lvl-val">3.00</span><span class="lvl-runs">—</span></div>
+          <div class="lvl"><span class="lvl-label">Ур. 1</span><span>−15 %</span><span class="lvl-val">2.55</span><span class="lvl-price">4 000</span></div>
+          <div class="lvl"><span class="lvl-label">Ур. 2</span><span>−15 %</span><span class="lvl-val">2.17</span><span class="lvl-price">12 000</span></div>
+        </div>
+        <div class="note">
+          <strong>Единственное улучшение, которое меняет решения игрока.</strong> Смена рельсы
+          с полным кузовом теряет 1–2 коробки из 8; подвеска делает переезд дешевле, и держать
+          высокий штабель на двух рельсах становится реально. Борта и аккумулятор дают запас
+          прочности, подвеска — свободу маневрировать.
+        </div>
+      </div>
+      <div>
+        <div class="compare">
+          <div class="cart-mini">
+            <div class="wall l" style="height:17px"></div>
+            <div class="wall r" style="height:17px"></div>
+            <div class="floor"></div>
+            <div class="wheel l"></div><div class="wheel r"></div>
+            <span class="cap">импульс 3.00</span>
+          </div>
+          <div class="arrow">→</div>
+          <div class="cart-mini">
+            <div class="wall l" style="height:17px"></div>
+            <div class="wall r" style="height:17px"></div>
+            <div class="floor"></div>
+            <div class="wheel l"></div><div class="wheel r"></div>
+            <span class="cap">импульс 2.17</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <div class="rail rail-grey"></div>
+  <h2>Прогрессия по покупкам</h2>
+  <p class="section-note">Покупки взяты в порядке возрастания цены — так их и берёт игрок,
+    если не гонится за конкретным эффектом. Доход 7560 за забег.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Покупка</th><th class="num">Цена</th><th class="num">Забегов накопить</th><th class="num">Итого забегов</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Высокие борта, ур. 1</td><td class="num">2 000</td><td class="num">1</td><td class="num">1</td></tr>
+        <tr><td>Аккумулятор, ур. 1</td><td class="num">3 200</td><td class="num">1</td><td class="num">1</td></tr>
+        <tr><td>Подвеска, ур. 1</td><td class="num">4 000</td><td class="num">1</td><td class="num">2</td></tr>
+        <tr><td>Высокие борта, ур. 2</td><td class="num">6 000</td><td class="num">1</td><td class="num">3</td></tr>
+        <tr><td>Аккумулятор, ур. 2</td><td class="num">8 000</td><td class="num">1</td><td class="num">4</td></tr>
+        <tr><td>Подвеска, ур. 2</td><td class="num">12 000</td><td class="num">2</td><td class="num">5</td></tr>
+        <tr><td>Высокие борта, ур. 3</td><td class="num">16 000</td><td class="num">2</td><td class="num">7</td></tr>
+        <tr><td>Аккумулятор, ур. 3</td><td class="num">20 000</td><td class="num">3</td><td class="num">10</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    <strong>Кривая та, что задумана.</strong> Первые три покупки берутся почти сразу — игрок
+    видит, что магазин работает. Дальше цены обгоняют доход, и последние два уровня требуют
+    по два-три забега каждый. Полный магазин — десятый забег.
+  </div>
+
+  <div class="rail rail-yellow"></div>
+  <h2>Категории, которых в магазине нет</h2>
+  <p class="section-note">QA просил показать вместимость, прочность и защиту от физических
+    воздействий. Ни одной из них в игре нет, и по каждой есть причина — не «не успели»,
+    а осознанное решение.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Категория</th><th>Статус</th><th>Почему так</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Вместимость кузова</strong></td>
+          <td><span class="chip chip-none">Отклонено</span></td>
+          <td>Отклонено при интервью и записано в бэклог: ограничение держит физика груза,
+            а не жёсткий лимит. Продавать «+2 коробки» означало бы поставить счётчик там, где
+            сейчас работает штабель — и убить главное напряжение игры</td>
+        </tr>
+        <tr>
+          <td><strong>Прочность</strong></td>
+          <td><span class="chip chip-none">Нет объекта</span></td>
+          <td>Тележка не имеет прочности как величины: она статичное тело и не может быть
+            повреждена. Роль здоровья играет XP, и его продаёт аккумулятор</td>
+        </tr>
+        <tr>
+          <td><strong>Защита от воздействий</strong></td>
+          <td><span class="chip chip-live">Уже есть, дважды</span></td>
+          <td>Это и есть высокие борта (гасят взрыв вдвое) и мягкая подвеска (гасит импульс при
+            смене рельсы). Отдельная линейка дублировала бы их</td>
+        </tr>
+        <tr>
+          <td><strong>Скины и косметика</strong></td>
+          <td><span class="chip chip-none">Anti-scope</span></td>
+          <td>Раздел 16 спеки: магазин продаёт только механические улучшения. Стиль игры —
+            grey box, красить в нём нечего</td>
+        </tr>
+        <tr>
+          <td><strong>Улучшения бустов</strong></td>
+          <td><span class="chip chip-new">Возможно в v2</span></td>
+          <td>Логичное расширение, когда бустов станет больше одного: «+50 к отдаче
+            восстановления», «бустер падает чаще». Сейчас продавать нечего — буст один</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note note-danger">
+    <strong>Цены живут ровно до следующей правки баланса.</strong> Спека требует пересчитывать
+    их каждый раз, когда меняется размер сдачи или длина забега. Множитель уже менялся дважды:
+    ×1 при написании спеки, ×6 после первого замера ботом, ×4 после правок физики груза.
+    Числа на этой странице верны на 17.08.2026 — сверяйтесь с <code>CONFIG.shop</code>.
+  </div>
+
+  <footer>
+    Cart Rush · docs/reference/shop.html · цены синхронны CONFIG.shop в index.html ·
+    доход измерен tools/qa/scenarios/economy.js, три сида, забег до нуля XP
+  </footer>
+
+</div>
