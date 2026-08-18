@@ -10,12 +10,33 @@ const { launch, saveReport } = require('../harness');
 const SEEDS = [11, 22, 33, 44, 55];
 const label = process.argv[2] || 'baseline';
 
+// Длительность разгона перед реверсом. 400 мс — тележка не доезжает до стены
+// и разворачивается на ходу; см. комментарий к S3
+const TURN_MS = 400;
+
+/* Тележка возвращается на середину поля перед каждым замером.
+   Без этого замер меряет не манёвр, а то, где тележка случайно осталась после
+   предыдущего сценария: у стены она не разгоняется вовсе, и «разворот на полном
+   ходу» превращался в старт с места. Двигаем штатным moveCartBy — тело Matter
+   едет вместе с графикой, как в самой игре */
+async function centerCart(g) {
+  await g.eval(() => {
+    const s = window.__game.scene.getScene('GameScene');
+    s.moveCartBy(CONFIG.screen.width / 2 - s.cart.x, 0);
+    s.cart.vx = 0;
+    s.holdTime = 0;
+    s.holdDir = 0;
+  });
+}
+
 // Один замер: поставить штабель, сделать действие, посчитать, что осталось
 async function measure(g, { size, count, action }) {
   await g.ensureRun();
   await g.pauseSpawn(true);
   await g.clearCargo();
   await g.refillXp();
+  await centerCart(g);
+  await g.wait(200);
   await g.stack(size, count);
   await g.wait(900);                 // штабель оседает
   await g.clearFalling();
@@ -40,6 +61,8 @@ async function drift(g, size, count, ms) {
   await g.pauseSpawn(true);
   await g.clearCargo();
   await g.refillXp();
+  await centerCart(g);
+  await g.wait(200);
   await g.stack(size, count);
   await g.wait(900);
   await g.clearFalling();
@@ -97,21 +120,34 @@ async function runSeed(seed) {
   // S2 — покой: ввода нет вообще
   out.s2_rest = await drift(g, 'medium', 10, 8000);
 
-  // S3 — разворот на максимуме: разгон до потолка и сразу в обратную сторону
+  /* S3 — разворот НА ХОДУ.
+
+     Разгон длится 400 мс, а не 700. Это не придирка к числу: за 700 мс тележка из
+     центра доезжает до края поля и упирается в стену, скорость падает в ноль, и
+     «разворот» превращался в старт с места — замер показывал 0.2 коробки и уводил
+     в сторону вывод о балансе. При 400 мс реверс происходит на 667 px/с из 780
+     возможных, и сценарий меряет то, ради чего написан. */
   out.s3_turn = await measure(g, {
     size: 'medium', count: 10,
-    action: async h => { await h.drive('right', 700); await h.drive('left', 700); }
+    action: async h => { await h.drive('right', TURN_MS); await h.drive('left', 700); }
   });
 
-  // S3б — тот же разворот на ЗАДНЕЙ рельсе. Импульсы задавались для передней,
-  // а борта и порог вылета там уменьшены в 0.82 — разница была в 12 раз
+  // S3б — тот же разворот на ЗАДНЕЙ рельсе. Борта и порог вылета там уменьшены
+  // в 0.82, импульсы гасятся impulseScale() — рельсы должны терять поровну
   await g.ensureRun();
   await g.switchRail('up');
   out.s3b_turn_back = await measure(g, {
     size: 'medium', count: 10,
-    action: async h => { await h.drive('right', 700); await h.drive('left', 700); }
+    action: async h => { await h.drive('right', TURN_MS); await h.drive('left', 700); }
   });
   await g.switchRail('down');
+
+  // S3в — упор в стену: тоже реальный игровой случай, но это НЕ разворот.
+  // Держим отдельно, чтобы он больше не притворялся замером манёвра
+  out.s3c_wall = await measure(g, {
+    size: 'medium', count: 10,
+    action: async h => { await h.drive('right', 900); await h.drive('left', 700); }
+  });
 
   // S4 — смена рельсы с полным кузовом
   out.s4_rail = await measure(g, {
@@ -194,6 +230,7 @@ async function main() {
     s2_rest_lost: avg(rows, r => r.s2_rest.settled - r.s2_rest.left),
     s3_turn_lost: avg(rows, r => r.s3_turn.lost),
     s3b_turn_back_lost: avg(rows, r => r.s3b_turn_back.lost),
+    s3c_wall_lost: avg(rows, r => r.s3c_wall.lost),
     s4_rail_lost: avg(rows, r => r.s4_rail.lost),
     s5_shift_small: avg(rows, r => r.s5_small.avgShift),
     s5_shift_large: avg(rows, r => r.s5_large.avgShift),
@@ -210,8 +247,9 @@ async function main() {
   console.log(`S1 спокойная езда, потеряно из 10:      ${summary.s1_calm_lost}   (цель 0)`);
   console.log(`S2 покой 8 с, макс. дрейф px:           ${summary.s2_rest_maxDrift}   (цель < 2)`);
   console.log(`S2 покой, потеряно само собой:          ${summary.s2_rest_lost}   (цель 0)`);
-  console.log(`S3 разворот, потеряно из 10:            ${summary.s3_turn_lost}   (цель 1-3)`);
+  console.log(`S3 разворот на ходу, потеряно из 10:    ${summary.s3_turn_lost}   (цель 1-3)`);
   console.log(`S3б разворот на ЗАДНЕЙ, потеряно из 10:  ${summary.s3b_turn_back_lost}   (цель 1-3, как спереди)`);
+  console.log(`S3в упор в стену, потеряно из 10:       ${summary.s3c_wall_lost}   (справочно, это не манёвр)`);
   console.log(`S4 смена рельсы, потеряно из 8:         ${summary.s4_rail_lost}   (цель 1-2)`);
   const s5ok = summary.s5_ratio && (summary.s5_ratio >= 1.5 || summary.s5_ratio <= 0.67);
   console.log(`S5 сдвиг small / large:                 ${summary.s5_shift_small} / ${summary.s5_shift_large} = ${summary.s5_ratio}   (различимо: ${s5ok ? 'да' : 'НЕТ'})`);
