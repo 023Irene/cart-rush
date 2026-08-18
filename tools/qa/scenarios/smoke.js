@@ -21,10 +21,14 @@ async function main() {
     `итерации ${engine.positionIterations}/${engine.velocityIterations}, сон ${engine.enableSleeping}`);
 
   // Находка Н1: трение у частей составного тела, а не у родителя
+  // До этапа 8.1 единицу тут ставил сам Matter: он перезаписывает friction у
+  // статичного тела. Кузов стал динамическим, и значение теперь наше —
+  // CONFIG.physics.inertia.cartFloorFriction
   const friction = await g.qa('cartFriction');
   const partsOk = friction.parts.every(f => f > 0.3);
   ok('трение кузова доходит до контактов', partsOk,
-    `родитель ${friction.parent}, части [${friction.parts.join(', ')}]`);
+    `родитель ${friction.parent}, части [${friction.parts.join(', ')}], ` +
+    `инерция ${friction.cargoInertia}`);
 
   // Ловля и сдача
   await g.pauseSpawn(true);

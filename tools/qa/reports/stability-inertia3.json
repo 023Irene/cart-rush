@@ -1,0 +1,371 @@
+{
+  "summary": {
+    "label": "inertia3",
+    "date": "2026-08-18T14:28:17.459Z",
+    "seeds": [
+      11,
+      22,
+      33,
+      44,
+      55
+    ],
+    "s0_capacity_settled": 14,
+    "s0_capacity_left": 6.8,
+    "s1_calm_lost": 2.4,
+    "s2_rest_maxDrift": 1.5,
+    "s2_rest_lost": 0,
+    "s3_turn_lost": 2.8,
+    "s3b_turn_back_lost": 1.2,
+    "s3c_wall_lost": 5.4,
+    "s4_rail_lost": 0,
+    "s5_shift_small": 3.25,
+    "s5_shift_large": 20.57,
+    "s10_maxRelError": 0,
+    "stepMs": 0.04,
+    "maxDepth": 8.54,
+    "errors": [],
+    "s5_ratio": 0.16
+  },
+  "rows": [
+    {
+      "seed": 11,
+      "s0_capacity": {
+        "settled": 14,
+        "left": 6,
+        "lost": 8,
+        "maxDepth": 5.646,
+        "stepMs": 0.1
+      },
+      "s1_calm": {
+        "settled": 10,
+        "left": 8,
+        "lost": 2,
+        "maxDepth": 6.687,
+        "stepMs": 0.1
+      },
+      "s2_rest": {
+        "settled": 10,
+        "left": 10,
+        "maxDrift": 1.48,
+        "avgDrift": 1.44,
+        "maxDepth": 8.54,
+        "awake": 10
+      },
+      "s3_turn": {
+        "settled": 10,
+        "left": 7,
+        "lost": 3,
+        "maxDepth": 4.732,
+        "stepMs": 0
+      },
+      "s3b_turn_back": {
+        "settled": 10,
+        "left": 9,
+        "lost": 1,
+        "maxDepth": 7.334,
+        "stepMs": 0.1
+      },
+      "s3c_wall": {
+        "settled": 10,
+        "left": 3,
+        "lost": 7,
+        "maxDepth": 2.583,
+        "stepMs": 0
+      },
+      "s4_rail": {
+        "settled": 8,
+        "left": 8,
+        "lost": 0,
+        "maxDepth": 7.057,
+        "stepMs": 0.1
+      },
+      "s5_small": {
+        "left": 1,
+        "avgShift": 3.27,
+        "mass": 3.072
+      },
+      "s5_large": {
+        "left": 1,
+        "avgShift": 43.37,
+        "mass": 7.373
+      },
+      "s10_scale": {
+        "boxes": 4,
+        "maxRelError": 0
+      },
+      "errors": []
+    },
+    {
+      "seed": 22,
+      "s0_capacity": {
+        "settled": 14,
+        "left": 6,
+        "lost": 8,
+        "maxDepth": 5.151,
+        "stepMs": 0.1
+      },
+      "s1_calm": {
+        "settled": 10,
+        "left": 8,
+        "lost": 2,
+        "maxDepth": 5.081,
+        "stepMs": 0
+      },
+      "s2_rest": {
+        "settled": 10,
+        "left": 10,
+        "maxDrift": 1.53,
+        "avgDrift": 1.48,
+        "maxDepth": 8.54,
+        "awake": 10
+      },
+      "s3_turn": {
+        "settled": 10,
+        "left": 7,
+        "lost": 3,
+        "maxDepth": 9.054,
+        "stepMs": 0.1
+      },
+      "s3b_turn_back": {
+        "settled": 10,
+        "left": 8,
+        "lost": 2,
+        "maxDepth": 5.814,
+        "stepMs": 0.1
+      },
+      "s3c_wall": {
+        "settled": 10,
+        "left": 5,
+        "lost": 5,
+        "maxDepth": 3.085,
+        "stepMs": 0.2
+      },
+      "s4_rail": {
+        "settled": 8,
+        "left": 8,
+        "lost": 0,
+        "maxDepth": 6.538,
+        "stepMs": 0.1
+      },
+      "s5_small": {
+        "left": 1,
+        "avgShift": 3.07,
+        "mass": 3.072
+      },
+      "s5_large": {
+        "left": 1,
+        "avgShift": 5.66,
+        "mass": 7.373
+      },
+      "s10_scale": {
+        "boxes": 4,
+        "maxRelError": 0
+      },
+      "errors": []
+    },
+    {
+      "seed": 33,
+      "s0_capacity": {
+        "settled": 14,
+        "left": 12,
+        "lost": 2,
+        "maxDepth": 9.616,
+        "stepMs": 0.1
+      },
+      "s1_calm": {
+        "settled": 10,
+        "left": 8,
+        "lost": 2,
+        "maxDepth": 6.929,
+        "stepMs": 0.1
+      },
+      "s2_rest": {
+        "settled": 10,
+        "left": 10,
+        "maxDrift": 1.53,
+        "avgDrift": 1.48,
+        "maxDepth": 8.54,
+        "awake": 10
+      },
+      "s3_turn": {
+        "settled": 10,
+        "left": 6,
+        "lost": 4,
+        "maxDepth": 3.878,
+        "stepMs": 0
+      },
+      "s3b_turn_back": {
+        "settled": 10,
+        "left": 8,
+        "lost": 2,
+        "maxDepth": 5.806,
+        "stepMs": 0.1
+      },
+      "s3c_wall": {
+        "settled": 10,
+        "left": 6,
+        "lost": 4,
+        "maxDepth": 5.473,
+        "stepMs": 0
+      },
+      "s4_rail": {
+        "settled": 8,
+        "left": 8,
+        "lost": 0,
+        "maxDepth": 5.938,
+        "stepMs": 0
+      },
+      "s5_small": {
+        "left": 1,
+        "avgShift": 3.39,
+        "mass": 3.072
+      },
+      "s5_large": {
+        "left": 1,
+        "avgShift": 42.58,
+        "mass": 7.373
+      },
+      "s10_scale": {
+        "boxes": 5,
+        "maxRelError": 0
+      },
+      "errors": []
+    },
+    {
+      "seed": 44,
+      "s0_capacity": {
+        "settled": 14,
+        "left": 5,
+        "lost": 9,
+        "maxDepth": 3.782,
+        "stepMs": 0.1
+      },
+      "s1_calm": {
+        "settled": 10,
+        "left": 7,
+        "lost": 3,
+        "maxDepth": 5.603,
+        "stepMs": 0.1
+      },
+      "s2_rest": {
+        "settled": 10,
+        "left": 10,
+        "maxDrift": 1.48,
+        "avgDrift": 1.44,
+        "maxDepth": 8.54,
+        "awake": 10
+      },
+      "s3_turn": {
+        "settled": 10,
+        "left": 7,
+        "lost": 3,
+        "maxDepth": 5.969,
+        "stepMs": 0.1
+      },
+      "s3b_turn_back": {
+        "settled": 10,
+        "left": 9,
+        "lost": 1,
+        "maxDepth": 5.09,
+        "stepMs": 0
+      },
+      "s3c_wall": {
+        "settled": 10,
+        "left": 6,
+        "lost": 4,
+        "maxDepth": 4.391,
+        "stepMs": 0.1
+      },
+      "s4_rail": {
+        "settled": 8,
+        "left": 8,
+        "lost": 0,
+        "maxDepth": 8.126,
+        "stepMs": 0.1
+      },
+      "s5_small": {
+        "left": 1,
+        "avgShift": 3.32,
+        "mass": 3.072
+      },
+      "s5_large": {
+        "left": 1,
+        "avgShift": 5.65,
+        "mass": 7.373
+      },
+      "s10_scale": {
+        "boxes": 4,
+        "maxRelError": 0
+      },
+      "errors": []
+    },
+    {
+      "seed": 55,
+      "s0_capacity": {
+        "settled": 14,
+        "left": 5,
+        "lost": 9,
+        "maxDepth": 6.194,
+        "stepMs": 0
+      },
+      "s1_calm": {
+        "settled": 10,
+        "left": 7,
+        "lost": 3,
+        "maxDepth": 6.401,
+        "stepMs": 0
+      },
+      "s2_rest": {
+        "settled": 10,
+        "left": 10,
+        "maxDrift": 1.48,
+        "avgDrift": 1.44,
+        "maxDepth": 8.54,
+        "awake": 10
+      },
+      "s3_turn": {
+        "settled": 10,
+        "left": 9,
+        "lost": 1,
+        "maxDepth": 5.127,
+        "stepMs": 0
+      },
+      "s3b_turn_back": {
+        "settled": 10,
+        "left": 10,
+        "lost": 0,
+        "maxDepth": 5.889,
+        "stepMs": 0
+      },
+      "s3c_wall": {
+        "settled": 10,
+        "left": 3,
+        "lost": 7,
+        "maxDepth": 2.509,
+        "stepMs": 0
+      },
+      "s4_rail": {
+        "settled": 8,
+        "left": 8,
+        "lost": 0,
+        "maxDepth": 6.018,
+        "stepMs": 0.1
+      },
+      "s5_small": {
+        "left": 1,
+        "avgShift": 3.21,
+        "mass": 3.072
+      },
+      "s5_large": {
+        "left": 1,
+        "avgShift": 5.6,
+        "mass": 7.373
+      },
+      "s10_scale": {
+        "boxes": 5,
+        "maxRelError": 0
+      },
+      "errors": []
+    }
+  ]
+}

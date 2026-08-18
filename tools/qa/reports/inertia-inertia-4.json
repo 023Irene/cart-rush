@@ -1,0 +1,123 @@
+{
+  "summary": {
+    "label": "inertia-4",
+    "date": "2026-08-18T13:53:58.021Z",
+    "seeds": [
+      11,
+      22,
+      33
+    ],
+    "limitX": 124,
+    "i1_start_peak": 122.98,
+    "i1_start_top": 122.77,
+    "i2_brake_peak": 121.16,
+    "i2_brake_top": 113.79,
+    "i3_turn_peak": 120.59,
+    "i3_turn_top": 35.82,
+    "i3_turn_lost": 5,
+    "i4_rail_peak": 41.55,
+    "maxAbsLag": 123.96,
+    "errors": []
+  },
+  "rows": [
+    {
+      "seed": 11,
+      "i1_start": {
+        "peakLag": 122.98,
+        "peakTopLag": 122.76,
+        "peakAbsLag": 122.98,
+        "frames": 101,
+        "left": 5
+      },
+      "i2_brake": {
+        "peakLag": 121.54,
+        "peakTopLag": 121.54,
+        "peakAbsLag": 121.54,
+        "frames": 84,
+        "left": 2
+      },
+      "i3_turn": {
+        "peakLag": 116.93,
+        "peakTopLag": 107.46,
+        "peakAbsLag": 123.96,
+        "frames": 181,
+        "left": 5,
+        "lostAfter": 5
+      },
+      "i4_rail": {
+        "peakLag": 40.76,
+        "peakTopLag": 0,
+        "peakAbsLag": 42.07,
+        "frames": 105,
+        "left": 2
+      },
+      "errors": []
+    },
+    {
+      "seed": 22,
+      "i1_start": {
+        "peakLag": 122.98,
+        "peakTopLag": 122.77,
+        "peakAbsLag": 122.98,
+        "frames": 101,
+        "left": 5
+      },
+      "i2_brake": {
+        "peakLag": 120.92,
+        "peakTopLag": 99.37,
+        "peakAbsLag": 120.92,
+        "frames": 88,
+        "left": 4
+      },
+      "i3_turn": {
+        "peakLag": 121.36,
+        "peakTopLag": 0,
+        "peakAbsLag": 122,
+        "frames": 181,
+        "left": 5,
+        "lostAfter": 5
+      },
+      "i4_rail": {
+        "peakLag": 40.25,
+        "peakTopLag": 0.58,
+        "peakAbsLag": 40.25,
+        "frames": 101,
+        "left": 1
+      },
+      "errors": []
+    },
+    {
+      "seed": 33,
+      "i1_start": {
+        "peakLag": 122.99,
+        "peakTopLag": 122.77,
+        "peakAbsLag": 122.99,
+        "frames": 101,
+        "left": 5
+      },
+      "i2_brake": {
+        "peakLag": 121.03,
+        "peakTopLag": 120.46,
+        "peakAbsLag": 121.03,
+        "frames": 85,
+        "left": 3
+      },
+      "i3_turn": {
+        "peakLag": 123.49,
+        "peakTopLag": 0,
+        "peakAbsLag": 123.49,
+        "frames": 181,
+        "left": 6,
+        "lostAfter": 5
+      },
+      "i4_rail": {
+        "peakLag": 40.15,
+        "peakTopLag": 0,
+        "peakAbsLag": 42.34,
+        "frames": 106,
+        "left": 2
+      },
+      "errors": []
+    }
+  ]
+}

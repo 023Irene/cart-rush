@@ -359,7 +359,10 @@ function initScript({ seed, save }) {
       return {
         parent: this.scene().cartBody.friction,
         parts: parts.slice(1).map(p => p.friction),
-        partsStatic: parts.slice(1).map(p => p.frictionStatic)
+        partsStatic: parts.slice(1).map(p => p.frictionStatic),
+        // Динамический кузов задаёт трение сам; статичному его ставит Matter
+        cargoInertia: CONFIG.physics.cargoInertia,
+        isStatic: this.scene().cartBody.isStatic
       };
     },
 

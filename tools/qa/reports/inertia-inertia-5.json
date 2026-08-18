@@ -1,0 +1,135 @@
+{
+  "summary": {
+    "label": "inertia-5",
+    "date": "2026-08-18T13:55:29.613Z",
+    "seeds": [
+      11,
+      22,
+      33
+    ],
+    "limitX": 124,
+    "i1_start_median": 43.92,
+    "i1_start_max": 121.01,
+    "i1_start_lost": 3,
+    "i2_brake_median": 115.41,
+    "i2_brake_max": 139.36,
+    "i3_turn_median": 18.69,
+    "i3_turn_max": 83.87,
+    "i3_turn_lost": 4,
+    "i4_rail_max": 2.1,
+    "errors": []
+  },
+  "rows": [
+    {
+      "seed": 11,
+      "i1_start": {
+        "peakMedian": 36.6,
+        "peakMax": 122.22,
+        "frames": 100,
+        "started": 8,
+        "left": 5,
+        "lost": 3
+      },
+      "i2_brake": {
+        "peakMedian": 105.69,
+        "peakMax": 135.35,
+        "frames": 88,
+        "started": 5,
+        "left": 4,
+        "lost": 1
+      },
+      "i3_turn": {
+        "peakMedian": 19.29,
+        "peakMax": 73.15,
+        "frames": 181,
+        "started": 8,
+        "left": 5,
+        "lost": 3,
+        "lostAfter": 4
+      },
+      "i4_rail": {
+        "peakMedian": 1.06,
+        "peakMax": 1.99,
+        "frames": 103,
+        "started": 8,
+        "left": 2,
+        "lost": 6
+      },
+      "errors": []
+    },
+    {
+      "seed": 22,
+      "i1_start": {
+        "peakMedian": 60.21,
+        "peakMax": 122.74,
+        "frames": 101,
+        "started": 8,
+        "left": 5,
+        "lost": 3
+      },
+      "i2_brake": {
+        "peakMedian": 131.76,
+        "peakMax": 139.57,
+        "frames": 85,
+        "started": 5,
+        "left": 3,
+        "lost": 2
+      },
+      "i3_turn": {
+        "peakMedian": 17.4,
+        "peakMax": 69.78,
+        "frames": 181,
+        "started": 8,
+        "left": 5,
+        "lost": 3,
+        "lostAfter": 4
+      },
+      "i4_rail": {
+        "peakMedian": 0,
+        "peakMax": 2.11,
+        "frames": 104,
+        "started": 8,
+        "left": 2,
+        "lost": 6
+      },
+      "errors": []
+    },
+    {
+      "seed": 33,
+      "i1_start": {
+        "peakMedian": 34.94,
+        "peakMax": 118.06,
+        "frames": 100,
+        "started": 8,
+        "left": 5,
+        "lost": 3
+      },
+      "i2_brake": {
+        "peakMedian": 108.78,
+        "peakMax": 143.15,
+        "frames": 88,
+        "started": 5,
+        "left": 4,
+        "lost": 1
+      },
+      "i3_turn": {
+        "peakMedian": 19.38,
+        "peakMax": 108.69,
+        "frames": 181,
+        "started": 8,
+        "left": 6,
+        "lost": 2,
+        "lostAfter": 4
+      },
+      "i4_rail": {
+        "peakMedian": 0.48,
+        "peakMax": 2.2,
+        "frames": 105,
+        "started": 8,
+        "left": 2,
+        "lost": 6
+      },
+      "errors": []
+    }
+  ]
+}
