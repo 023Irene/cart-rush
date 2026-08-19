@@ -17,12 +17,8 @@
     background: #33363b;
     font-family: "Segoe UI", system-ui, sans-serif;
   }
-  /* Без touch-action мобильный браузер забирает себе свайпы (скролл и pull-to-refresh)
-     и до игры они не доходят. Остальное убирает подсветку тапа и выделение текста */
+  /* Двойной клик по канвасу не должен выделять ничего вокруг игры */
   html, body, #game, canvas {
-    touch-action: none;
-    overscroll-behavior: none;
-    -webkit-tap-highlight-color: transparent;
     -webkit-user-select: none;
     user-select: none;
   }
@@ -51,14 +47,9 @@ const CONFIG = {
   // Логический размер ИГРОВОГО ПОЛЯ. Ширина подгоняется под окно в fitScreenToWindow():
   // берётся пропорция окна, зажатая между aspectMin и aspectMax.
   // Сейчас обе границы 4:3 — поле всегда 853×640. Чтобы поле снова тянулось за окном,
-  // поставить aspectMax: 16 / 9.
-  //
-  // canvasHeight и offsetY считаются в fitScreenToWindow(): на портретном экране канвас
-  // выше поля, а свободная полоса под полем отдаётся под палец. Само поле остаётся
-  // 853×640 всегда — баланс не должен зависеть от того, как держат телефон
+  // поставить aspectMax: 16 / 9
   screen: {
-    width: 853, height: 640, aspectMin: 4 / 3, aspectMax: 4 / 3,
-    canvasHeight: 640, offsetY: 0
+    width: 853, height: 640, aspectMin: 4 / 3, aspectMax: 4 / 3
   },
 
   // Палитра grey box: серым рисуется всё, цвет остаётся только там, где несёт смысл
@@ -291,53 +282,19 @@ const CONFIG = {
     missBelowRail: 34,   // насколько ниже своей рельсы коробка засчитана как промах
     cargoDropX: 24,      // запас сверх полуширины кузова, после которого груз за бортом
     cargoDropY: 60       // насколько груз может провалиться ниже пола кузова
-  },
-
-  // Управление пальцем (GAME_SPEC.md, раздел 9)
-  touch: {
-    swipeDistance: 40,   // вертикальный сдвиг, с которого жест считается свайпом
-    swipeTime: 300,      // и только если он уложился в это время, мс
-    tapSlop: 12,         // сдвиг больше этого — уже не тап, а ведение
-    tapTime: 300,        // касание дольше этого — тоже не тап, мс
-    deadZone: 6,         // ближе этого к цели тележка стоит: иначе дребезг у цели
-
-    // Неподвижный палец начинает везти тележку не сразу: иначе тап по сдаче
-    // дёргал бы её к себе на те 100 мс, что палец лежит на экране. Ведение с
-    // движением начинается мгновенно — сдвиг больше tapSlop снимает задержку
-    holdDelay: 120,
-
-    // Портрет: во сколько раз канвас может быть выше своей ширины. 2.2 покрывает
-    // самые вытянутые телефоны (9:19.5 — это 2.17), поэтому чёрных полос сверху и
-    // снизу не остаётся вовсе. На размер поля потолок не влияет: поле вписывается
-    // по ширине, и на экране оно одинаковое при любом значении
-    canvasRatioMax: 2.2,
-    fieldTopBias: 0.12   // какая доля добавки уходит НАД полем, остальное — под него
   }
 };
 
 /* Ширина под пропорции окна: тогда Scale.FIT растягивает канвас ровно на окно
    и тёмных полос по краям не остаётся. Высота ПОЛЯ логически фиксирована.
    Клампим именно ПРОПОРЦИЮ, а не ширину в пикселях: уже 4:3 поле становится тесным,
-   а шире 16:9 тележка перестаёт успевать доехать до коробки на другом краю.
-
-   Канвас при этом может быть выше поля. На портретном экране поле иначе осталось бы
-   узкой полоской по центру с пустотой сверху и снизу; вместо этого канвас тянется на
-   всю высоту окна, поле встаёт ближе к верху, а свободная полоса под ним работает
-   зоной для пальца — там он не закрывает коробки. Поле не меняется ни на пиксель. */
+   а шире 16:9 тележка перестаёт успевать доехать до коробки на другом краю. */
 function fitScreenToWindow() {
   const s = CONFIG.screen;
   const winW = window.innerWidth || 1280;
   const winH = window.innerHeight || 720;
   const fit = Math.min(s.aspectMax, Math.max(s.aspectMin, winW / winH));
   s.width = Math.round(s.height * fit);
-
-  // Высота канваса под пропорцию окна, но не ниже поля и не выше потолка
-  const wanted = Math.round(s.width * (winH / winW));
-  const maxHeight = Math.round(s.width * CONFIG.touch.canvasRatioMax);
-  s.canvasHeight = Math.max(s.height, Math.min(maxHeight, wanted));
-
-  // Добавка делится между «над полем» и «под полем». Под палец уходит большая часть
-  s.offsetY = Math.round((s.canvasHeight - s.height) * CONFIG.touch.fieldTopBias);
 }
 fitScreenToWindow();
 
@@ -475,21 +432,6 @@ function textStyle(size, color, bold) {
   };
 }
 
-/* Тач или клавиатура. Ноутбук с сенсорным экраном считаем тачем тоже: лишняя
-   кнопка паузы на нём никому не мешает, а её отсутствие на телефоне делает игру
-   непроходимой — в паузу иначе не войти вовсе */
-function isTouchDevice(scene) {
-  return !!(scene.sys.game.device.input.touch || navigator.maxTouchPoints > 0);
-}
-
-/* Поле 853×640 живёт внутри канваса со сдвигом: в портрете под полем остаётся
-   полоса для пальца. Двигаем КАМЕРУ, а не координаты — весь код сцен продолжает
-   рисовать в прежних 0…853 × 0…640, а pointer.worldX/worldY приходят уже
-   пересчитанными в координаты поля. Физика Matter об этом не знает вовсе */
-function alignFieldCamera(scene) {
-  scene.cameras.main.setScroll(0, -CONFIG.screen.offsetY);
-}
-
 /* Список управления. Один источник на меню и паузу: раньше это была строка в 16 px,
    продублированная в трёх местах, и на паузе она не читалась. */
 const KEY_HINTS = [
@@ -499,15 +441,6 @@ const KEY_HINTS = [
   { keys: ['Esc'], text: 'пауза' },
   { keys: ['M'], text: 'звук вкл / выкл' },
   { keys: ['H'], text: 'показать подсказку в забеге' }
-];
-
-// То же самое для телефона. Управление другое целиком, поэтому это отдельный
-// список, а не перевод: пальцем нет ни удержания стрелки, ни клавиши звука
-const TOUCH_HINTS = [
-  { keys: ['вести палец'], text: 'тележка едет к пальцу' },
-  { keys: ['свайп ↑ ↓'], text: 'сменить рельсу' },
-  { keys: ['тап'], text: 'сдать груз и получить очки' },
-  { keys: ['⏸'], text: 'пауза, там же звук' }
 ];
 
 /* Кнопка из прямоугольника и текста — отдельных ассетов не нужно.
@@ -539,7 +472,7 @@ function makeButton(scene, x, y, label, onClick, opts) {
 // Плашки выкладываются справа налево от общей границы, поэтому колонка
 // описаний стоит ровно при любом количестве клавиш в строке
 function drawKeyHints(scene, centerX, topY) {
-  const rows = isTouchDevice(scene) ? TOUCH_HINTS : KEY_HINTS;
+  const rows = KEY_HINTS;
   const rowHeight = 34;
   const capHeight = 26;
   const gap = 6;
@@ -643,7 +576,6 @@ class MenuScene extends Phaser.Scene {
   create() {
     const { width } = CONFIG.screen;
     this.cameras.main.setBackgroundColor(CONFIG.colors.bg);
-    alignFieldCamera(this);
 
     this.add.text(width / 2, 96, 'CART RUSH',
       textStyle(72, CONFIG.colors.text, true)).setOrigin(0.5);
@@ -677,7 +609,6 @@ class GameScene extends Phaser.Scene {
 
   create() {
     this.cameras.main.setBackgroundColor(CONFIG.colors.bg);
-    alignFieldCamera(this);
 
     // Улучшения читаются один раз на забег и складываются в снимок
     this.applyUpgrades();
@@ -702,7 +633,6 @@ class GameScene extends Phaser.Scene {
     this.lastErrorSound = 0;
     this.holdTime = 0;        // сколько мс держится текущее направление — из этого разгон
     this.holdDir = 0;
-    this.touch = null;        // разбор текущего касания: ведение, свайп или тап
     this.hintTimer = null;    // таймер затухания подсказки, перезапускается по H
     this.hintFade = null;
 
@@ -732,7 +662,6 @@ class GameScene extends Phaser.Scene {
     this.createShadows();
     this.createCart();
     this.createInput();
-    this.createTouchInput();
     this.createHud();
 
     // Спавн по таймеру; интервал пересоздаётся при росте темпа
@@ -803,27 +732,6 @@ class GameScene extends Phaser.Scene {
 
     CONFIG.rails.forEach((rail, index) => this.drawRail(rail, index));
 
-    this.drawTouchBand();
-  }
-
-  // Полоса под полем в портретной ориентации: там держат палец, чтобы он не
-  // закрывал коробки. Игрового смысла у неё нет, поэтому она заметно темнее пола
-  // и отделена линией — иначе читалась бы как продолжение цеха, куда можно уронить груз
-  drawTouchBand() {
-    const { width, height, canvasHeight, offsetY } = CONFIG.screen;
-    const band = canvasHeight - height - offsetY;
-    if (band <= 0) return;
-
-    const g = this.add.graphics().setDepth(-8);
-    g.fillStyle(0x212429, 1);
-    g.fillRect(0, height, width, band);
-    g.lineStyle(2, CONFIG.colors.rail, 0.6);
-    g.lineBetween(0, height + 1, width, height + 1);
-
-    // Подпись держим у верха полосы: на вытянутом телефоне её середина уезжает
-    // к нижнему краю экрана, где на неё никто не смотрит
-    this.add.text(width / 2, height + Math.min(band / 2, 70), 'веди палец здесь',
-      textStyle(16, CONFIG.colors.textDim)).setOrigin(0.5).setAlpha(0.4).setDepth(-8);
   }
 
   // Рельса рисуется своей графикой: у задней всё тоньше, темнее и бледнее —
@@ -1033,76 +941,6 @@ class GameScene extends Phaser.Scene {
     kb.on('keydown-H', () => this.showHint());
   }
 
-  /* ---------- ввод пальцем (GAME_SPEC.md, раздел 9) ---------- */
-  //
-  // Одно касание разбирается на три жеста без всяких экранных стрелок:
-  //   ведение — тележка едет к X пальца, через тот же driveCart(), поэтому разгон
-  //             и удар по штабелю остаются ровно теми же, что от стрелок;
-  //   свайп ↑/↓ — смена рельсы;
-  //   тап — сдача груза.
-  // Разводятся они сдвигом и временем: тап короткий и почти без движения, свайп —
-  // резкий вертикальный рывок, всё остальное считается ведением.
-  createTouchInput() {
-    const t = CONFIG.touch;
-
-    // Второй аргумент — объекты под пальцем. Тап по кнопке паузы не должен
-    // заодно считаться жестом сдачи груза
-    this.input.on('pointerdown', (pointer, over) => {
-      if (this.over || (over && over.length)) return;
-
-      this.touch = {
-        id: pointer.id,
-        startX: pointer.worldX, startY: pointer.worldY,
-        x: pointer.worldX,
-        time: this.time.now,
-        moved: false, swiped: false
-      };
-    });
-
-    this.input.on('pointermove', pointer => {
-      if (!this.touch || pointer.id !== this.touch.id || !pointer.isDown) return;
-
-      const dx = pointer.worldX - this.touch.startX;
-      const dy = pointer.worldY - this.touch.startY;
-      this.touch.x = pointer.worldX;
-
-      if (Math.abs(dx) > t.tapSlop || Math.abs(dy) > t.tapSlop) this.touch.moved = true;
-
-      // Свайп засчитывается один раз за касание: без флага долгий рывок вниз
-      // переключал бы рельсу на каждом кадре движения пальца
-      if (!this.touch.swiped &&
-          Math.abs(dy) >= t.swipeDistance && Math.abs(dy) > Math.abs(dx) &&
-          this.time.now - this.touch.time <= t.swipeTime) {
-        this.touch.swiped = true;
-        this.switchRail(dy < 0 ? -1 : 1);
-      }
-    });
-
-    // Палец мог уйти за край канваса — тогда приходит pointerupoutside,
-    // и без него касание осталось бы «нажатым» навсегда
-    const release = pointer => {
-      if (!this.touch || pointer.id !== this.touch.id) return;
-
-      const quick = this.time.now - this.touch.time <= t.tapTime;
-      if (!this.touch.moved && !this.touch.swiped && quick && !this.over) this.unloadCargo();
-
-      this.touch = null;
-    };
-
-    this.input.on('pointerup', release);
-    this.input.on('pointerupoutside', release);
-  }
-
-  // Куда везти тележку пальцем, или null — пальца нет и рулят клавиши.
-  // Неподвижное касание начинает вести не сразу, иначе тап по сдаче дёргал бы
-  // тележку к себе; палец, который уже поехал, отвечает мгновенно
-  touchTargetX() {
-    if (!this.touch) return null;
-    const held = this.time.now - this.touch.time;
-    if (!this.touch.moved && held < CONFIG.touch.holdDelay) return null;
-    return this.touch.x;
-  }
-
   // Отдельного экрана громкости в проекте не будет (anti-scope 16.9),
   // но выключить звук игрок должен мочь: клавишей M на десктопе и кнопкой
   // на экране паузы с телефона, где клавиатуры нет
@@ -1119,16 +957,6 @@ class GameScene extends Phaser.Scene {
     const left = this.keys.left.isDown || this.keys.a.isDown;
     const right = this.keys.right.isDown || this.keys.d.isDown;
     let dir = (left ? -1 : 0) + (right ? 1 : 0);
-
-    // Палец главнее клавиш: если он на экране, тележка едет к нему.
-    // Мёртвая зона у цели обязательна — без неё направление меняло бы знак
-    // каждый кадр, holdTime обнулялся бы вместе с ним, и вместо разгона
-    // штабель получал бы очередь мелких рывков
-    const target = this.touchTargetX();
-    if (target !== null) {
-      const dx = target - this.cart.x;
-      dir = Math.abs(dx) > CONFIG.touch.deadZone ? Math.sign(dx) : 0;
-    }
 
     // Разгон при удержании: чем дольше держишь одну стрелку, тем быстрее едет тележка.
     // Отпустил или развернулся — счётчик обнуляется, разгон начинается заново.
@@ -1148,20 +976,14 @@ class GameScene extends Phaser.Scene {
     let vx = dir * speed;
     if ((this.cart.x <= minX && vx < 0) || (this.cart.x >= maxX && vx > 0)) vx = 0;
 
-    // Старая модель. Рывок — разница скоростей: старт, торможение или разворот
+    // Рывок — разница скоростей: старт, торможение или разворот
     const dvx = vx - this.cart.vx;
     if (dvx !== 0) this.swayCargo(dvx);
     this.cart.vx = vx;
 
     if (vx === 0) return;
 
-    let nextX = this.cart.x + vx * delta / 1000;
-
-    // Не проскакивать палец: на большом delta шаг может перелететь цель,
-    // а на следующем кадре тележка поехала бы обратно — вышла бы тряска
-    if (target !== null) nextX = vx > 0 ? Math.min(nextX, target) : Math.max(nextX, target);
-
-    nextX = Phaser.Math.Clamp(nextX, minX, maxX);
+    const nextX = Phaser.Math.Clamp(this.cart.x + vx * delta / 1000, minX, maxX);
     this.moveCartBy(nextX - this.cart.x, 0);
   }
 
@@ -1688,9 +1510,8 @@ class GameScene extends Phaser.Scene {
   // Бустер отчитывается в правом верхнем углу (GAME_SPEC.md, раздел 11):
   // над тележкой ему тесно, там уже стоит цена сдачи
   showBoosterPopup(text) {
-    // Кнопка паузы стоит в том же углу: на телефоне сдвигаем цифру левее неё
     const label = this.add.text(
-      CONFIG.screen.width - 20 - (this.pauseButtonWidth || 0), 20, text,
+      CONFIG.screen.width - 20, 20, text,
       textStyle(22, hex(CONFIG.colors.booster), true)).setOrigin(1, 0).setDepth(20);
 
     this.tweens.add({
@@ -1849,26 +1670,7 @@ class GameScene extends Phaser.Scene {
     this.add.text(width / 2, 54, `Рекорд: ${this.bestScore}`,
       textStyle(15, CONFIG.colors.textDim)).setOrigin(0.5, 0).setDepth(20);
 
-    this.createPauseButton();
     this.createHint();
-  }
-
-  // На телефоне клавиши Esc нет, и без экранной кнопки в паузу не войти вовсе.
-  // На десктопе она не нужна и не рисуется — там за паузу отвечают Esc и P
-  createPauseButton() {
-    if (!isTouchDevice(this)) return;
-
-    const size = 44;
-    const x = CONFIG.screen.width - size / 2 - 12;
-    const y = size / 2 + 12;
-
-    const box = this.add.rectangle(x, y, size, size, CONFIG.colors.cart, 0.25)
-      .setDepth(20).setInteractive({ useHandCursor: true });
-    this.add.text(x, y, '⏸', textStyle(20, CONFIG.colors.text, true))
-      .setOrigin(0.5).setDepth(21);
-
-    box.on('pointerdown', () => this.pauseGame());
-    this.pauseButtonWidth = size + 24;
   }
 
   // Подсказка клавиш висит первые 10 секунд и гаснет. Вернуть её можно клавишей H:
@@ -1876,9 +1678,7 @@ class GameScene extends Phaser.Scene {
   createHint() {
     // Ставим на полосу пола под передней рельсой: в середине экрана подсказка
     // оказывалась ровно на пути падающих коробок и резала их пополам
-    const text = isTouchDevice(this)
-      ? 'веди палец — ехать  ·  свайп ↑ ↓ — рельса  ·  тап — сдать  ·  ⏸ — пауза'
-      : '← → — ехать  ·  ↑ ↓ — рельса  ·  Пробел — сдать  ·  Esc — пауза  ·  M — звук  ·  H — эта строка';
+    const text = '← → — ехать  ·  ↑ ↓ — рельса  ·  Пробел — сдать  ·  Esc — пауза  ·  M — звук  ·  H — эта строка';
 
     this.hint = this.add.text(CONFIG.screen.width / 2, CONFIG.screen.height - 24, text,
       textStyle(16, CONFIG.colors.textDim)).setOrigin(0.5).setDepth(20);
@@ -1977,11 +1777,8 @@ class PauseScene extends Phaser.Scene {
 
   create() {
     const { width, height } = CONFIG.screen;
-    alignFieldCamera(this);
 
-    // Затемнение кладём на ВЕСЬ канвас, а не только на поле: в портрете иначе
-    // полоса под полем осталась бы светлой и пауза читалась бы как полупрозрачная
-    this.add.rectangle(0, -CONFIG.screen.offsetY, width, CONFIG.screen.canvasHeight,
+    this.add.rectangle(0, 0, width, height,
       0x000000, 0.65).setOrigin(0).setDepth(0);
 
     this.add.text(width / 2, 80, 'ПАУЗА', textStyle(54, '#ffffff', true))
@@ -2040,7 +1837,6 @@ class GameOverScene extends Phaser.Scene {
   create() {
     const { width } = CONFIG.screen;
     this.cameras.main.setBackgroundColor(CONFIG.colors.bg);
-    alignFieldCamera(this);
 
     const save = SaveManager.load();
     const isRecord = this.isRecord;
@@ -2091,7 +1887,6 @@ class ShopScene extends Phaser.Scene {
   create() {
     const { width, height } = CONFIG.screen;
     this.cameras.main.setBackgroundColor(CONFIG.colors.bg);
-    alignFieldCamera(this);
 
     this.save = SaveManager.load();
 
@@ -2212,7 +2007,7 @@ const gameConfig = {
   type: Phaser.AUTO,
   parent: 'game',
   width: CONFIG.screen.width,
-  height: CONFIG.screen.canvasHeight,
+  height: CONFIG.screen.height,
   backgroundColor: CONFIG.colors.bg,
   scale: {
     mode: Phaser.Scale.FIT,
@@ -2232,14 +2027,12 @@ const gameConfig = {
 
 const game = new Phaser.Game(gameConfig);
 
-/* Поворот телефона и любое изменение окна: пересчитываем высоту канваса и сдвиг
-   поля, затем поправляем камеры уже запущенных сцен. Забег при этом продолжается —
-   перезапускать сцену нельзя, игрок потерял бы прогресс из-за случайного поворота.
-   Ширина поля остаётся прежней: обе границы пропорции стоят на 4:3 */
+/* Изменение размера окна пересчитывает ширину поля под его пропорцию. Сцены при
+   этом не перезапускаются: забег не должен теряться из-за того, что окно потянули.
+   Сейчас обе границы пропорции стоят на 4:3, так что ширина по факту не меняется */
 window.addEventListener('resize', () => {
   fitScreenToWindow();
-  game.scale.resize(CONFIG.screen.width, CONFIG.screen.canvasHeight);
-  game.scene.getScenes(true).forEach(scene => alignFieldCamera(scene));
+  game.scale.resize(CONFIG.screen.width, CONFIG.screen.height);
 });
 </script>
 </body>
