@@ -101,12 +101,6 @@ const CONFIG = {
     speedBase: 430,        // px/с сразу после нажатия стрелки
     speedMax: 780,         // px/с после полного разгона
     accelTime: 600,        // мс удержания одной стрелки до максимальной скорости
-    rampRate: 800,        // px/с² — с какой быстротой скорость догоняет заданную.
-                           // Работает только при cargoInertia. Раньше скорость
-                           // прыгала с 0 до 430 px/с за один кадр: приклеенному
-                           // грузу это было безразлично, а живой первым же
-                           // нажатием сносило к борту. Ускорение стало конечным,
-                           // и «разгон» перестал быть рывком
     switchDuration: 150,   // мс на смену рельсы
     swayImpulse: 0.7,      // толчок грузу при рывке влево-вправо, задан для k = 1
     swayMinK: 0.08,        // ниже этого перепада скорости груз не трогаем: разгон идёт
@@ -258,12 +252,6 @@ const CONFIG = {
   physics: {
     gravityY: 1,               // спека 5.5 фиксирует 1.0
 
-    // Модель груза. true — коробки едут за кузовом трением дна (этап 8.1, ADR-0007):
-    // отставание на старте, навал на торможении и снос верха на развороте берутся
-    // из физики. false — прежняя модель: груз телепортируется вместе с тележкой, а
-    // крен имитирует swayCargo. Рубильник оставлен на случай отката
-    cargoInertia: false,
-
     // Решатель. Дефолты Matter (6/4) рассчитаны на пару тел: штабель из 8-10
     // разнокалиберных коробок за шесть проходов не сходится, и остаточное
     // проникновение на следующем шаге выдавливает соседа вбок
@@ -274,7 +262,7 @@ const CONFIG = {
     // restitution, slop). У тележки friction равен 1 не по нашей воле: Matter
     // принудительно ставит статичному телу friction 1 и restitution 0 —
     // поэтому трение контакта «коробка-дно» задаётся здесь, а не там
-    boxFriction: 0.45,         // при cargoInertia перекрывается: см. inertia ниже
+    boxFriction: 0.45,
     boxFrictionStatic: 1.0,    // порог срыва покоя: лежащий штабель не трогается
                                // с места от слабого воздействия, но после срыва
                                // трение обычное. Ровно граница «езда / рывок»
@@ -294,41 +282,7 @@ const CONFIG = {
 
     // Потолок скорости в момент, когда коробка становится грузом. К концу забега
     // она падает втрое быстрее, чем в начале, и вбивает штабель внутрь себя
-    catchMaxSpeed: 5.0,
-
-    // Числа, которые у двух моделей разные. При cargoInertia: true они перекрывают
-    // одноимённые сверху; читать их можно только через phys(), иначе откат по флагу
-    // перестанет быть откатом
-    inertia: {
-      // Плотность кузова. Он тяжелее коробки в сотни раз намеренно: скорость
-      // тележке задаётся каждый кадр, и груз не должен её сдвигать столкновениями
-      cartDensity: 0.25,
-
-      // Трение дна кузова. У статичного тела Matter принудительно ставил единицу,
-      // и число в CONFIG не работало вовсе; у динамического оно настоящее.
-      // В паре Matter берёт min(friction), так что реальное трение контакта —
-      // min(cartFloorFriction, boxFriction), а между коробками просто boxFriction
-      cartFloorFriction: 3.0,
-
-      // Считается, а не подбирается. Коробка едет за дном, пока трения хватает
-      // на её ускорение: mu * g >= a. Замер дал g около 320 px/с² при gravityY 1,
-      // а разгон тележки — 800 px/с², то есть a/g = 2.5. Значит 0.45 не хватало
-      // вовсе: кузов уезжал из-под штабеля, теряя половину груза на старте.
-      // Тройка даёт запас над 2.5 — прямой ход почти не проскальзывает, и весь
-      // риск переезжает на опрокидывание высокого штабеля. Это уже не трение,
-      // а рычаг: штабель валится, когда a/g превышает полуширину, делённую на
-      // высоту его центра тяжести, и потому высокий груз опаснее низкого.
-      //
-      // Поднимать тяжесть вместо трения пробовали и отказались: при gravityY 2
-      // и выше решатель расходится, штабель расползается сам собой. ADR-0007
-      boxFriction: 3.0,
-
-      // Толчок грузу на переезде — тот же, что у старой модели. Инерция его не
-      // заменяет: расстояние между рельсами это перспектива, а не высота, и
-      // ронять груз «падением» было бы наказанием за переезд, которого в мире
-      // игры не было. Замер: 6 коробок из 8 при цели 1-3
-      railImpulse: 1.8
-    }
+    catchMaxSpeed: 5.0
   },
 
   // Границы, за которыми объект считается потерянным.
@@ -360,22 +314,6 @@ const CONFIG = {
     fieldTopBias: 0.12   // какая доля добавки уходит НАД полем, остальное — под него
   }
 };
-
-/* Число физики груза: при включённой инерции берётся из CONFIG.physics.inertia,
-   иначе — базовое рядом. Один вход на оба режима, чтобы откат оставался сменой
-   одного флага, а не поиском разъехавшихся значений по файлу */
-function phys(key) {
-  const p = CONFIG.physics;
-  return p.cargoInertia && key in p.inertia ? p.inertia[key] : p[key];
-}
-
-/* Добавка грузу на смене рельсы. У модели с инерцией она своя: там переезд бьёт
-   по штабелю сам, и прежний импульс сверху дал бы двойной учёт */
-function railImpulseBase() {
-  return CONFIG.physics.cargoInertia
-    ? CONFIG.physics.inertia.railImpulse
-    : CONFIG.cart.railImpulse;
-}
 
 /* Ширина под пропорции окна: тогда Scale.FIT растягивает канвас ровно на окно
    и тёмных полос по краям не остаётся. Высота ПОЛЯ логически фиксирована.
@@ -828,7 +766,7 @@ class GameScene extends Phaser.Scene {
     this.upgrades = {
       wallHeight: CONFIG.cart.wallHeight + level.walls * shop.walls.step,
       startXp: CONFIG.xp.start + level.battery * shop.battery.step,
-      railImpulse: railImpulseBase() *
+      railImpulse: CONFIG.cart.railImpulse *
         Math.pow(shop.suspension.factor, level.suspension)
     };
   }
@@ -983,9 +921,6 @@ class GameScene extends Phaser.Scene {
   // Тело пересобирается при смене рельсы: масштаб другой, а Body.scale на
   // статичном составном теле копит погрешность — проще собрать заново
   buildCartBody() {
-    // Скорость переживает пересборку: тело пересоздаётся на смене рельсы, и без
-    // переноса разогнанная тележка вставала бы посреди манёвра
-    const keepVx = this.cartBody ? this.cartBody.velocity.x : 0;
     if (this.cartBody) this.matter.world.remove(this.cartBody);
 
     const c = CONFIG.cart;
@@ -1002,54 +937,23 @@ class GameScene extends Phaser.Scene {
     // Материал задаётся КАЖДОЙ части: столкновения составного тела Matter считает
     // по частям, и свойство на родителе до контакта не доходит.
     //
-    // У статичного кузова friction задавать бесполезно: Body.setStatic всё равно
-    // перезапишет его на 1 (и restitution на 0). У динамического оно работает —
-    // и именно это трение тащит груз за тележкой вместо телепорта
-    const inertia = CONFIG.physics.cargoInertia;
+    // Кузов статичен: груз переносится вместе с ним, а крен на манёврах даёт
+    // swayCargo(). У статичного тела friction задавать бесполезно — Body.setStatic
+    // всё равно перезапишет его на 1 (и restitution на 0), поэтому трение контакта
+    // «коробка-дно» живёт в CONFIG.physics.boxFriction
     const surface = {
-      frictionStatic: phys('boxFrictionStatic'),
+      frictionStatic: CONFIG.physics.boxFrictionStatic,
       slop: CONFIG.physics.contactSlop
     };
-    if (inertia) surface.friction = phys('cartFloorFriction');
     const floor = this.matter.bodies.rectangle(x, bedY + ft / 2, w, ft, surface);
     const leftWall = this.matter.bodies.rectangle(x - w / 2 + wt / 2, bedY - wh / 2, wt, wh, surface);
     const rightWall = this.matter.bodies.rectangle(x + w / 2 - wt / 2, bedY - wh / 2, wt, wh, surface);
 
     this.cartBody = this.matter.body.create({
       parts: [floor, leftWall, rightWall],
-      isStatic: !inertia,
+      isStatic: true,
       label: 'cart'
     });
-
-    if (inertia) {
-      // Кинематическое тело: скорость ему задаёт ввод, а груз не может его ни
-      // сдвинуть, ни повернуть, ни продавить — обратная масса и обратный момент
-      // равны нулю, ровно как Matter делает статичным телам. Масса при этом
-      // остаётся конечной намеренно: с Infinity любая сила давала бы NaN
-      this.matter.body.setDensity(this.cartBody, phys('cartDensity'));
-      this.cartBody.inverseMass = 0;
-      this.cartBody.inverseInertia = 0;
-      this.cartBody.gravityScale = 0;
-      this.cartBody.ignoreGravity = true;
-      this.cartBody.frictionAir = 0;
-      this.matter.body.setVelocity(this.cartBody, { x: keepVx, y: 0 });
-    }
-
-    // У составного тела Matter position — центр масс, а не верх пола кузова.
-    // На этом уже спотыкались (рассинхрон 21 px), поэтому разницу считаем один раз
-    // на сборку и дальше переводим одно в другое вычитанием
-    this.cartBodyOffset = {
-      x: this.cartBody.position.x - this.cart.x,
-      y: this.cartBody.position.y - this.cart.y
-    };
-
-    // Тяжесть в том же масштабе, что и всё остальное на этой рельсе. Длины,
-    // скорости и ускорения уменьшены в 0.82 — если оставить g прежним, подобие
-    // сломается и дальний штабель начнёт вести себя как в другой гравитации.
-    // Падающие объекты этого не замечают: у них ignoreGravity и своя скорость
-    if (inertia) {
-      this.matter.world.engine.gravity.y = phys('gravityY') * this.cart.scale;
-    }
 
     this.applyFilter(this.cartBody, CAT.cart[this.cart.rail], cartMask(this.cart.rail));
     this.matter.world.add(this.cartBody);
@@ -1209,37 +1113,6 @@ class GameScene extends Phaser.Scene {
 
   /* ---------- тележка как физическое тело ---------- */
 
-  // При инерции источник движения — тело Matter, а this.cart становится его
-  // зеркалом. Переучивать всё остальное незачем: на this.cart.x завязаны графика,
-  // тени, вылет за борт, HUD и вся QA-оснастка
-  syncCartFromBody() {
-    if (!CONFIG.physics.cargoInertia) return;
-    const body = this.cartBody;
-
-    this.cart.x = body.position.x - this.cartBodyOffset.x;
-
-    // Упор в края экрана: про границы поля Matter не знает
-    const half = (CONFIG.cart.width * this.cart.scale) / 2;
-    const clamped = Phaser.Math.Clamp(this.cart.x, half, CONFIG.screen.width - half);
-    if (clamped !== this.cart.x) {
-      this.cart.x = clamped;
-      this.matter.body.setPosition(body,
-        { x: clamped + this.cartBodyOffset.x, y: body.position.y });
-      this.matter.body.setVelocity(body, { x: 0, y: body.velocity.y });
-    }
-
-    // Y правим ТОЛЬКО когда он реально уехал — то есть на смене рельсы.
-    // Сажать кузов «на место» каждый кадр нельзя: он вдавливается в лежащие на
-    // нём коробки, решатель выдавливает их вбок, и штабель расползается сам собой.
-    // Замер: дрейф в покое 20 px и проникновение 3.7 px против 0 и 0.6 без этого
-    const wantY = this.cart.targetY + this.cartBodyOffset.y;
-    if (Math.abs(body.position.y - wantY) > 0.05) {
-      this.matter.body.setPosition(body, { x: body.position.x, y: wantY });
-      this.matter.body.setVelocity(body, { x: body.velocity.x, y: 0 });
-    }
-    this.cart.y = this.cart.targetY;
-  }
-
   /* ---------- горизонтальный ход ---------- */
   driveCart(delta) {
     const c = CONFIG.cart;
@@ -1274,38 +1147,6 @@ class GameScene extends Phaser.Scene {
 
     let vx = dir * speed;
     if ((this.cart.x <= minX && vx < 0) || (this.cart.x >= maxX && vx > 0)) vx = 0;
-
-    // Инерция: скорость отдаётся телу, груз едет за кузовом трением дна.
-    // Искусственных толчков здесь больше нет — они были бы двойным учётом
-    if (CONFIG.physics.cargoInertia) {
-      // Дальняя рельса — это не «другая тележка», а та же самая дальше от глаза.
-      // Значит и скорость, и разгон обязаны идти в том же масштабе, что и её
-      // размеры, иначе один и тот же разворот теряет там втрое больше груза:
-      // борта и порог вылета уменьшены в 0.82, а скорость оставалась прежней
-      const rs = this.cart.scale;
-      const accel = c.rampRate * rs;
-      let wanted = vx * rs;
-
-      // Тормозной путь на текущей скорости. Он же решает две задачи, которые
-      // раньше решались мгновенной остановкой: упор в стену и подъезд к пальцу.
-      // Мгновенная остановка — это бесконечное замедление, и живой штабель она
-      // выбрасывает вперёд целиком; тележка обязана тормозить заранее
-      const stop = (this.cart.vx * this.cart.vx) / (2 * accel);
-      if (this.cart.vx > 0 && maxX - this.cart.x <= stop) wanted = 0;
-      if (this.cart.vx < 0 && this.cart.x - minX <= stop) wanted = 0;
-      if (target !== null && Math.abs(target - this.cart.x) <= stop) wanted = 0;
-
-      // Разгон и торможение занимают время. Без этого нажатие стрелки меняло
-      // скорость с 0 до 430 px/с за один кадр — бесконечное ускорение, которое
-      // живой груз сносит к борту целиком
-      const rate = accel * delta / 1000;
-      vx = Phaser.Math.Clamp(wanted, this.cart.vx - rate, this.cart.vx + rate);
-
-      this.cart.vx = vx;
-      // Matter меряет скорость в пикселях за шаг (16.7 мс), а не в секунду
-      this.matter.body.setVelocity(this.cartBody, { x: vx / 60, y: 0 });
-      return;
-    }
 
     // Старая модель. Рывок — разница скоростей: старт, торможение или разворот
     const dvx = vx - this.cart.vx;
@@ -1498,8 +1339,8 @@ class GameScene extends Phaser.Scene {
 
     const p = CONFIG.physics;
     const obj = this.matter.add.image(x, -sizePx, texture, null, {
-      friction: phys('boxFriction'),
-      frictionStatic: phys('boxFrictionStatic'),
+      friction: CONFIG.physics.boxFriction,
+      frictionStatic: CONFIG.physics.boxFrictionStatic,
       frictionAir: p.boxFrictionAir,
       restitution: p.boxRestitution,
       slop: p.contactSlop,
@@ -1658,15 +1499,8 @@ class GameScene extends Phaser.Scene {
     // За забег скорость падения растёт втрое, а энергия удара по штабелю — в семь
     // раз, ровно к тому моменту, когда штабель высокий. Режем только позднюю
     // эскалацию: до 300 px/с коробка садится ровно так же, как раньше
-    // Коробка прилетает с vx = 0, а дно под ней едет до 780 px/с. Без наследования
-    // переносной скорости каждая ловля на ходу била бы по штабелю сильнее разворота
     const cap = CONFIG.physics.catchMaxSpeed;
-    if (CONFIG.physics.cargoInertia) {
-      this.matter.body.setVelocity(box.body, {
-        x: this.cartBody.velocity.x,
-        y: Math.min(box.body.velocity.y, cap)
-      });
-    } else if (box.body.velocity.y > cap) {
+    if (box.body.velocity.y > cap) {
       this.matter.body.setVelocity(box.body, { x: box.body.velocity.x, y: cap });
     }
 
@@ -1910,7 +1744,6 @@ class GameScene extends Phaser.Scene {
 
     this.run.elapsed += delta;
 
-    this.syncCartFromBody();
     this.driveCart(delta);
     this.rampDifficulty();
     this.holdFallSpeed();
@@ -2388,9 +2221,9 @@ const gameConfig = {
   physics: {
     default: 'matter',
     matter: {
-      gravity: { x: 0, y: phys('gravityY') },
-      positionIterations: phys('positionIterations'),
-      velocityIterations: phys('velocityIterations'),
+      gravity: { x: 0, y: CONFIG.physics.gravityY },
+      positionIterations: CONFIG.physics.positionIterations,
+      velocityIterations: CONFIG.physics.velocityIterations,
       debug: CONFIG.debug
     }
   },
