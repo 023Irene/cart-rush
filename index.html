@@ -165,32 +165,40 @@ const CONFIG = {
   },
 
   // Магазин улучшений (GAME_SPEC.md, 5.8). Валюта — очки, набранные за все забеги.
-  // Цены = пропорции спеки × 4. Множитель пересчитан после правок физики: кузов
-  // держит больше коробок, но забег стал короче, и замер даёт около 7600 очков за
-  // забег вместо прежних 10 500. Дизайнерская цель та же — первая покупка после
-  // первого забега, весь магазин примерно к десятому.
+  // Цены = пропорции спеки БЕЗ множителя (этап 8.4). Множитель был нужен, пока
+  // валюта равнялась счёту и измерялась тысячами; монеты считаются от ценности
+  // груза и дают около 1900-2100 за забег, поэтому исходные числа спеки подошли
+  // ровно. Замер: первая покупка после первого забега, весь магазин к 9-10-му —
+  // это и есть дизайнерская цель.
   // Максимум уровней — это длина prices, отдельного поля не нужно
   shop: {
     order: ['walls', 'battery', 'suspension'],
     walls: {
       title: 'Высокие борта',
       effect: '+8 px к высоте бортов за уровень',
-      prices: [2000, 6000, 16000],
+      prices: [500, 1500, 4000],
       step: 8
     },
     battery: {
       title: 'Усиленный аккумулятор',
       effect: '+100 к стартовому XP за уровень',
-      prices: [3200, 8000, 20000],
+      prices: [800, 2000, 5000],
       step: 100
     },
     suspension: {
       title: 'Мягкая подвеска',
       effect: '−15 % к импульсу груза при смене рельсы',
-      prices: [4000, 12000],
+      prices: [1000, 3000],
       factor: 0.85
     }
   },
+
+  // Монеты начисляются НЕ от счёта. Счёт растёт как сумма × количество, то есть
+  // квадратично от размера сдачи, и при валюте, равной счёту, один удачный забег
+  // открывал половину магазина. Монеты считаются от суммарной ценности сданного
+  // груза без умножения на количество: очки остаются мерой мастерства и идут
+  // в рекорд, монеты — мерой наигранного объёма (этап 8.4)
+  coins: { rate: 2 },
 
   // XP. Стартовый запас поднят с 500: промах теперь тоже стоит XP (ADR-0003),
   // и часть утечки игрок не может предотвратить в принципе
@@ -616,6 +624,7 @@ class GameScene extends Phaser.Scene {
       xp: this.upgrades.startXp,
       maxXp: this.upgrades.startXp,
       score: 0,
+      coins: 0,
       elapsed: 0,
       fallSpeed: CONFIG.fall.speedStart,
       spawnInterval: CONFIG.fall.intervalStart,
@@ -1385,12 +1394,18 @@ class GameScene extends Phaser.Scene {
 
   /* ---------- сдача груза ---------- */
 
-  // Цена сдачи: сумма ценностей × количество (GAME_SPEC.md, 5.4).
-  // Один метод на HUD и на начисление, чтобы показанная цифра не разошлась с реальной
+  // Суммарная ценность груза. От неё считаются и очки, и монеты — по разным
+  // формулам, но от одного числа, чтобы они не разошлись
+  cargoSum() {
+    return this.cargo.reduce((sum, box) => sum + box.boxData.value, 0);
+  }
+
+  // Цена сдачи в ОЧКАХ: сумма ценностей × количество (GAME_SPEC.md, 5.4).
+  // Квадратичность намеренная: копить выгоднее, чем сдавать по одной
   cargoValue() {
     const count = this.cargo.length;
     if (count === 0) return 0;
-    return this.cargo.reduce((sum, box) => sum + box.boxData.value, 0) * count;
+    return this.cargoSum() * count;
   }
 
   // Цвет большинства коробок в кузове: им красятся и ярлык цены, и частицы сдачи —
@@ -1408,6 +1423,7 @@ class GameScene extends Phaser.Scene {
     const tint = this.cargoTint();
 
     this.run.score += gained;
+    this.run.coins += Math.round(this.cargoSum() * CONFIG.coins.rate);
     this.cargo.forEach(box => box.destroy());
     this.cargo = [];
 
@@ -1481,12 +1497,13 @@ class GameScene extends Phaser.Scene {
     const save = SaveManager.load();
     const isRecord = this.run.score > save.bestScore;
     if (isRecord) save.bestScore = this.run.score;
-    save.currency += this.run.score;
+    save.currency += this.run.coins;
     SaveManager.save(save);
 
     // Пауза перед экраном: игрок должен успеть увидеть, что именно его добило
     this.time.delayedCall(800, () => {
-      this.scene.start('GameOverScene', { score: this.run.score, isRecord });
+      this.scene.start('GameOverScene',
+        { score: this.run.score, coins: this.run.coins, isRecord });
     });
   }
 
@@ -1794,6 +1811,7 @@ class GameOverScene extends Phaser.Scene {
   // потому что сюда можно вернуться из магазина
   init(data) {
     this.finalScore = data.score || 0;
+    this.earnedCoins = data.coins || 0;
     this.isRecord = !!data.isRecord;
   }
 
@@ -1813,7 +1831,7 @@ class GameOverScene extends Phaser.Scene {
     this.add.text(width / 2, 256, isRecord ? 'Новый рекорд!' : `Рекорд: ${save.bestScore}`,
       textStyle(22, isRecord ? hex(CONFIG.colors.booster) : CONFIG.colors.textDim)).setOrigin(0.5);
 
-    this.add.text(width / 2, 318, `Заработано: +${this.finalScore}`,
+    this.add.text(width / 2, 318, `Заработано: +${this.earnedCoins} монет`,
       textStyle(24, hex(CONFIG.colors.boxYellow), true)).setOrigin(0.5);
     this.add.text(width / 2, 350, `Всего монет: ${save.currency}`,
       textStyle(18, CONFIG.colors.textDim)).setOrigin(0.5);
@@ -1827,7 +1845,7 @@ class GameOverScene extends Phaser.Scene {
     // Вход в магазин прямо отсюда: игрок только что получил валюту и готов её тратить
     makeButton(this, width / 2, 496, 'МАГАЗИН', () => this.scene.start('ShopScene', {
       from: 'GameOverScene',
-      returnData: { score: this.finalScore, isRecord: this.isRecord }
+      returnData: { score: this.finalScore, coins: this.earnedCoins, isRecord: this.isRecord }
     }), opts);
   }
 }

@@ -173,6 +173,7 @@ function initScript({ seed, save }) {
       return {
         elapsed: Math.round(s.run.elapsed),
         score: s.run.score,
+        coins: s.run.coins,
         xp: Math.round(s.run.xp),
         maxXp: s.run.maxXp,
         over: !!s.over,
@@ -375,6 +376,7 @@ function initScript({ seed, save }) {
         if (opt.stopAt && s.run.elapsed >= opt.stopAt && !this.botStats.capped) {
           this.botStats.capped = true;
           this.botStats.cappedScore = s.run.score;
+          this.botStats.cappedCoins = s.run.coins;
           this.botStats.cappedElapsed = Math.round(s.run.elapsed);
           press(0);
         }
@@ -461,6 +463,7 @@ function initScript({ seed, save }) {
       const save = JSON.parse(localStorage.getItem('cartRushSave') || '{}');
       return {
         score: s ? s.run.score : null,
+        coins: s ? s.run.coins : null,
         elapsed: s ? Math.round(s.run.elapsed) : null,
         over: s ? !!s.over : true,
         currency: save.currency || 0,
@@ -576,7 +579,7 @@ class Harness {
     const stats = await this.stopBot();
     const live = await this.runResult();
     const result = stats.capped
-      ? { ...live, score: stats.cappedScore, elapsed: stats.cappedElapsed }
+      ? { ...live, score: stats.cappedScore, coins: stats.cappedCoins, elapsed: stats.cappedElapsed }
       : live;
     return { ...result, ...stats, timedOut: !!stats.capped, hung };
   }

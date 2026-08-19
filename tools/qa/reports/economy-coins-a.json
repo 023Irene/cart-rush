@@ -1,0 +1,311 @@
+{
+  "summary": {
+    "label": "coins-a",
+    "date": "2026-08-19T12:40:28.430Z",
+    "bot8": {
+      "runs": 3,
+      "score": 7587,
+      "scoreMin": 3320,
+      "scoreMax": 11520,
+      "coins": 1897,
+      "coinsMin": 830,
+      "coinsMax": 2880,
+      "seconds": 80,
+      "wallSeconds": 57.8,
+      "timeRatio": 1.318,
+      "ticksPerGameSec": 20,
+      "unloads": 5.3,
+      "avgUnloadSize": 8,
+      "maxUnloadSize": 8,
+      "dodges": 9.7,
+      "drops": 9.7,
+      "misses": 4,
+      "timedOut": 0
+    },
+    "bot5": {
+      "runs": 2,
+      "score": 9625,
+      "scoreMin": 8425,
+      "scoreMax": 10825,
+      "coins": 3850,
+      "coinsMin": 3370,
+      "coinsMax": 4330,
+      "seconds": 128.7,
+      "wallSeconds": 94.7,
+      "timeRatio": 1.337,
+      "ticksPerGameSec": 20,
+      "unloads": 17.5,
+      "avgUnloadSize": 5,
+      "maxUnloadSize": 5,
+      "dodges": 20.5,
+      "drops": 8.5,
+      "misses": 10.5,
+      "timedOut": 0
+    },
+    "currentPrices": [
+      [
+        3000,
+        9000,
+        24000
+      ],
+      [
+        4800,
+        12000,
+        30000
+      ],
+      [
+        6000,
+        18000
+      ]
+    ],
+    "currentProgression": {
+      "growth": 0,
+      "firstBuyAfterRun": 2,
+      "allBoughtAfterRun": 57,
+      "total": 106800
+    },
+    "currentProgressionRange": [
+      {
+        "growth": 0,
+        "firstBuyAfterRun": 2,
+        "allBoughtAfterRun": 57,
+        "total": 106800
+      },
+      {
+        "growth": 0.15,
+        "firstBuyAfterRun": 2,
+        "allBoughtAfterRun": 30,
+        "total": 106800
+      }
+    ],
+    "proportionSum": 17800,
+    "wantedMultiplier": 1,
+    "proposedPrices": [
+      [
+        500,
+        1500,
+        4000
+      ],
+      [
+        800,
+        2000,
+        5000
+      ],
+      [
+        1000,
+        3000
+      ]
+    ],
+    "proposedProgression": {
+      "growth": 0,
+      "firstBuyAfterRun": 1,
+      "allBoughtAfterRun": 10,
+      "total": 17800
+    },
+    "proposedProgressionRange": [
+      {
+        "growth": 0,
+        "firstBuyAfterRun": 1,
+        "allBoughtAfterRun": 10,
+        "total": 17800
+      },
+      {
+        "growth": 0.15,
+        "firstBuyAfterRun": 1,
+        "allBoughtAfterRun": 6,
+        "total": 17800
+      }
+    ],
+    "errors": []
+  },
+  "rows": [
+    {
+      "seed": 101,
+      "unloadAt": 8,
+      "score": 11520,
+      "coins": 2880,
+      "elapsed": 104417,
+      "over": true,
+      "currency": 2880,
+      "bestScore": 11520,
+      "unloads": 8,
+      "sizes": [
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8,
+        8
+      ],
+      "railSwitches": 34,
+      "dodges": 29,
+      "drops": 11,
+      "misses": 6,
+      "ticks": 2049,
+      "startedGame": 2000,
+      "startedWall": 1787142850292,
+      "gameMs": 102417,
+      "wallMs": 67513,
+      "timeRatio": 1.517,
+      "ticksPerGameSec": 20.01,
+      "timedOut": false,
+      "hung": false,
+      "errors": []
+    },
+    {
+      "seed": 202,
+      "unloadAt": 8,
+      "score": 7920,
+      "coins": 1980,
+      "elapsed": 86750,
+      "over": true,
+      "currency": 1980,
+      "bestScore": 7920,
+      "unloads": 6,
+      "sizes": [
+        8,
+        8,
+        8,
+        8,
+        8,
+        8
+      ],
+      "railSwitches": 25,
+      "dodges": 0,
+      "drops": 11,
+      "misses": 3,
+      "ticks": 1695,
+      "startedGame": 2000,
+      "startedWall": 1787142921658,
+      "gameMs": 84750,
+      "wallMs": 62460,
+      "timeRatio": 1.357,
+      "ticksPerGameSec": 20,
+      "timedOut": false,
+      "hung": false,
+      "errors": []
+    },
+    {
+      "seed": 303,
+      "unloadAt": 8,
+      "score": 3320,
+      "coins": 830,
+      "elapsed": 48867,
+      "over": true,
+      "currency": 830,
+      "bestScore": 3320,
+      "unloads": 2,
+      "sizes": [
+        8,
+        8
+      ],
+      "railSwitches": 9,
+      "dodges": 0,
+      "drops": 7,
+      "misses": 3,
+      "ticks": 937,
+      "startedGame": 2000,
+      "startedWall": 1787142987958,
+      "gameMs": 46867,
+      "wallMs": 43339,
+      "timeRatio": 1.081,
+      "ticksPerGameSec": 19.99,
+      "timedOut": false,
+      "hung": false,
+      "errors": []
+    }
+  ],
+  "cautious": [
+    {
+      "seed": 101,
+      "unloadAt": 5,
+      "score": 8425,
+      "coins": 3370,
+      "elapsed": 116633,
+      "over": true,
+      "currency": 3370,
+      "bestScore": 8425,
+      "unloads": 14,
+      "sizes": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "railSwitches": 30,
+      "dodges": 26,
+      "drops": 9,
+      "misses": 11,
+      "ticks": 2293,
+      "startedGame": 2000,
+      "startedWall": 1787143035132,
+      "gameMs": 114633,
+      "wallMs": 87636,
+      "timeRatio": 1.308,
+      "ticksPerGameSec": 20,
+      "timedOut": false,
+      "hung": false,
+      "errors": []
+    },
+    {
+      "seed": 202,
+      "unloadAt": 5,
+      "score": 10825,
+      "coins": 4330,
+      "elapsed": 140833,
+      "over": true,
+      "currency": 4330,
+      "bestScore": 10825,
+      "unloads": 21,
+      "sizes": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "railSwitches": 50,
+      "dodges": 15,
+      "drops": 8,
+      "misses": 10,
+      "ticks": 2777,
+      "startedGame": 2000,
+      "startedWall": 1787143126575,
+      "gameMs": 138833,
+      "wallMs": 101710,
+      "timeRatio": 1.365,
+      "ticksPerGameSec": 20,
+      "timedOut": false,
+      "hung": false,
+      "errors": []
+    }
+  ]
+}

@@ -34,6 +34,12 @@ async function playOnce(seed, unloadAt) {
   return { seed, unloadAt, ...result, errors };
 }
 
+// Разброс в процентах от минимума: одно число вместо пары «мин-макс»
+function spread(min, max) {
+  if (!min || !isFinite(min) || !isFinite(max)) return 0;
+  return Math.round((max / min - 1) * 100);
+}
+
 function stats(rows) {
   const nums = key => rows.map(r => r[key]).filter(v => typeof v === 'number');
   const mean = arr => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
@@ -43,6 +49,13 @@ function stats(rows) {
     score: Math.round(mean(nums('score'))),
     scoreMin: Math.min(...nums('score')),
     scoreMax: Math.max(...nums('score')),
+
+    // Монеты считаются от суммарной ценности груза, а счёт — от неё же, умноженной
+    // на количество (этап 8.4). Разброс монет обязан быть заметно уже разброса
+    // счёта: ради этого валюту и разводили с рекордом
+    coins: Math.round(mean(nums('coins'))),
+    coinsMin: Math.min(...nums('coins')),
+    coinsMax: Math.max(...nums('coins')),
     seconds: +(mean(nums('elapsed')) / 1000).toFixed(1),
 
     // Часы бота против часов игры. tickMs = 50, значит ticksPerGameSec обязан
@@ -124,14 +137,15 @@ async function main() {
   const proportions = [[500, 1500, 4000], [800, 2000, 5000], [1000, 3000]];
   const current = [[3000, 9000, 24000], [4800, 12000, 30000], [6000, 18000]];
 
-  const now = progression(main8.score, current);
-  const nowRange = progressionRange(main8.score, current);
+  // Магазин покупается за МОНЕТЫ, поэтому и прогрессия считается по ним
+  const now = progression(main8.coins, current);
+  const nowRange = progressionRange(main8.coins, current);
   // Цель дизайна из спеки: первая покупка после первого забега, весь магазин ~к десятому
   const proportionSum = proportions.flat().reduce((a, b) => a + b, 0);
-  const wantedMultiplier = Math.round((main8.score * 10) / proportionSum);
+  const wantedMultiplier = Math.max(1, Math.round((main8.coins * 10) / proportionSum));
   const proposed = proportions.map(line => line.map(v => v * wantedMultiplier));
-  const after = progression(main8.score, proposed);
-  const afterRange = progressionRange(main8.score, proposed);
+  const after = progression(main8.coins, proposed);
+  const afterRange = progressionRange(main8.coins, proposed);
 
   const summary = {
     label,
@@ -153,7 +167,10 @@ async function main() {
   console.log(`Бот, сдача по 8:  счёт ${main8.score} (${main8.scoreMin}-${main8.scoreMax}), забег ${main8.seconds} с, сдач ${main8.unloads} по ${main8.avgUnloadSize} коробки`);
   console.log(`  потери груза за борт ${main8.drops}, промахов ${main8.misses} за забег`);
   console.log(`Бот, сдача по 5:  счёт ${main5.score}, забег ${main5.seconds} с, потерь ${main5.drops}, промахов ${main5.misses}`);
-  console.log(`Замер спеки был:  10 500 очков за 150-170 с`);
+  console.log(`Монет за забег:   ${main8.coins} (${main8.coinsMin}-${main8.coinsMax}) `
+    + `— именно они покупают магазин`);
+  console.log(`  разброс: счёт ${spread(main8.scoreMin, main8.scoreMax)} %, монеты ${spread(main8.coinsMin, main8.coinsMax)} % ` +
+    `(у монет обязан быть уже — этап 8.4)`);
   console.log(`\nЦены сейчас (сумма ${now.total}): первая покупка после забега ${now.firstBuyAfterRun}, весь магазин к ${nowRange[1].allBoughtAfterRun}-${nowRange[0].allBoughtAfterRun}-му`);
   console.log(`  (вилка: доход постоянный ${nowRange[0].allBoughtAfterRun} забегов, доход +15 % с покупки — ${nowRange[1].allBoughtAfterRun})`);
   console.log(`Цель: первая покупка после 1-го, весь магазин примерно к 10-му`);
