@@ -235,6 +235,9 @@ function initScript({ seed, save }) {
 
     reseed(value) { return window.__setSeed(value); },
 
+    // Цены и шаги магазина — чтобы сценарий не дублировал числа из CONFIG
+    shopSpec() { return JSON.parse(JSON.stringify(CONFIG.shop)); },
+
     // Пересев ровно в момент рождения забега. Звать reseed() снаружи мало: между
     // командой «старт» и командой «пересей» проходит реальное время, за него
     // успевает нападать разное число коробок, и они уже разошлись. Здесь пересев
@@ -548,6 +551,7 @@ class Harness {
   startBot(opts) { return this.qa('startBot', opts); }
   reseed(value) { return this.qa('reseed', value); }
   armSeed(value) { return this.qa('armSeed', value); }
+  shopSpec() { return this.qa('shopSpec'); }
   fixedStep(opts) { return this.qa('fixedStep', opts); }
   fixedStepOff() { return this.qa('fixedStepOff'); }
   stopBot() { return this.qa('stopBot'); }

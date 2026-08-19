@@ -74,45 +74,90 @@ function stats(rows) {
   };
 }
 
+// Кривая дохода берётся из ЗАМЕРА, а не из головы.
+//
+// tools/qa/scenarios/upgrades.js гоняет бота на пяти состояниях магазина — от пустого
+// до полного — и меряет монеты за забег на каждом. Замер показал, что равномерный рост
+// «на столько-то процентов с покупки» неверен НЕ ТОЛЬКО по величине, но и по форме:
+// первые две покупки дают +62 %, последние четыре — +3 %. Доход выходит на плато после
+// четвёртой покупки, дальше улучшения берут выживаемостью, а не заработком.
+//
+// Поэтому подставляем кривую целиком, интерполируя между замеренными точками, а не
+// один усреднённый множитель. Если отчёта нет — откатываемся на прежнюю вилку и честно
+// пишем об этом в выводе
+function loadCurve() {
+  try {
+    const r = require('../reports/upgrades-base.json');
+    const points = (r.summary ? r.summary.points : r.points) || [];
+    if (points.length >= 2 && points[0].coins > 0) {
+      return { points, measured: true, source: 'upgrades-base.json' };
+    }
+  } catch (e) { /* отчёта ещё нет */ }
+  return { points: null, measured: false, source: null };
+}
+
+const CURVE = loadCurve();
+
+// Доход после `bought` покупок, приведённый к доходу текущего замера.
+// Замер улучшений и замер экономики гоняются на разных сидах и разной длине забега,
+// поэтому от кривой берётся только ФОРМА: во сколько раз доход отличается от дохода
+// на пустом магазине. Абсолютная величина — из текущего прогона
+function incomeAt(baseIncome, bought) {
+  if (!CURVE.measured) return baseIncome;
+  const pts = CURVE.points;
+  const base = pts[0].coins;
+
+  let ratio;
+  if (bought <= pts[0].bought) ratio = 1;
+  else if (bought >= pts[pts.length - 1].bought) ratio = pts[pts.length - 1].coins / base;
+  else {
+    let i = 0;
+    while (i < pts.length - 2 && pts[i + 1].bought < bought) i++;
+    const a = pts[i];
+    const b = pts[i + 1];
+    const t = (bought - a.bought) / (b.bought - a.bought);
+    ratio = (a.coins + (b.coins - a.coins) * t) / base;
+  }
+  return baseIncome * ratio;
+}
+
 // Сколько забегов нужно, чтобы скупить магазин при таком доходе.
 //
-// growth — насколько растёт доход с каждой покупкой. Ноль означает «доход
-// постоянный», и это ЗАВЕДОМО пессимистично: высокие борта держат больше груза,
-// аккумулятор удлиняет забег, подвеска бережёт штабель — каждая покупка поднимает
-// счёт следующего забега. При growth = 0 число забегов получается верхней границей,
-// а не оценкой. Точная модель требует замера дохода на каждом уровне улучшений;
-// пока вместо неё считаем вилку по нескольким значениям роста
-function progression(scorePerRun, prices, growth = 0) {
+// mode: 'flat' — доход постоянный, заведомо пессимистичная верхняя граница;
+//       'curve' — доход растёт по замеренной кривой
+function progression(baseIncome, prices, mode = 'flat') {
   const all = prices.flat().sort((a, b) => a - b);
   const total = all.reduce((a, b) => a + b, 0);
   let coins = 0;
   let runs = 0;
-  let income = scorePerRun;
   const bought = [];
   while (bought.length < all.length && runs < 500) {
     runs++;
-    coins += income;
+    coins += mode === 'curve' ? incomeAt(baseIncome, bought.length) : baseIncome;
     while (bought.length < all.length && coins >= all[bought.length]) {
       coins -= all[bought.length];
       bought.push(runs);
-      income *= 1 + growth;
     }
   }
   return {
-    growth,
+    mode,
     firstBuyAfterRun: bought[0] || null,
     allBoughtAfterRun: bought[bought.length - 1] || null,
     total
   };
 }
 
-// Вилка: доход постоянный (верхняя граница числа забегов) и доход растёт на
-// 15 % с покупки. Пока нет замера по уровням улучшений, честнее показывать обе
-function progressionRange(scorePerRun, prices) {
-  return [0, 0.15].map(g => progression(scorePerRun, prices, g));
+// Вилка: доход постоянный (верхняя граница числа забегов) и доход по замеренной кривой
+function progressionRange(baseIncome, prices) {
+  return ['flat', 'curve'].map(m => progression(baseIncome, prices, m));
 }
 
 async function main() {
+  // Один лишний запуск браузера ради цен окупается тем, что числа не разъезжаются
+  const probe = await launch({ seed: 1 });
+  const shop = await probe.shopSpec();
+  await probe.close();
+
   const rows = [];
   for (const seed of SEEDS) {
     process.stdout.write(`забег, сид ${seed}... `);
@@ -135,7 +180,11 @@ async function main() {
 
   // Цены из спеки: пропорции × множитель. Считаем, каким множитель должен стать
   const proportions = [[500, 1500, 4000], [800, 2000, 5000], [1000, 3000]];
-  const current = [[3000, 9000, 24000], [4800, 12000, 30000], [6000, 18000]];
+
+  // Действующие цены читаем ИЗ ИГРЫ, а не дублируем здесь. Дубль уже подвёл: после
+  // этапа 8.4 цены в CONFIG.shop упали вчетверо, а сценарий продолжал печатать
+  // «цены сейчас» по числам, устаревшим ещё до того — и считал по ним прогрессию
+  const current = shop.order.map(key => shop[key].prices);
 
   // Магазин покупается за МОНЕТЫ, поэтому и прогрессия считается по ним
   const now = progression(main8.coins, current);
@@ -172,7 +221,11 @@ async function main() {
   console.log(`  разброс: счёт ${spread(main8.scoreMin, main8.scoreMax)} %, монеты ${spread(main8.coinsMin, main8.coinsMax)} % ` +
     `(у монет обязан быть уже — этап 8.4)`);
   console.log(`\nЦены сейчас (сумма ${now.total}): первая покупка после забега ${now.firstBuyAfterRun}, весь магазин к ${nowRange[1].allBoughtAfterRun}-${nowRange[0].allBoughtAfterRun}-му`);
-  console.log(`  (вилка: доход постоянный ${nowRange[0].allBoughtAfterRun} забегов, доход +15 % с покупки — ${nowRange[1].allBoughtAfterRun})`);
+  console.log(`  (вилка: доход постоянный — ${nowRange[0].allBoughtAfterRun} забегов, ` +
+    `доход по замеренной кривой — ${nowRange[1].allBoughtAfterRun})`);
+  console.log(CURVE.measured
+    ? `  кривая дохода ЗАМЕРЕНА (${CURVE.source}), а не взята из головы`
+    : `  кривая дохода НЕ замерена — прогнать tools/qa/scenarios/upgrades.js base 3 150`);
   console.log(`Цель: первая покупка после 1-го, весь магазин примерно к 10-му`);
   console.log(`Множитель к пропорциям спеки: было 6, нужно ${summary.wantedMultiplier}`);
   console.log(`Предлагаемые цены: ${JSON.stringify(proposed)}`);

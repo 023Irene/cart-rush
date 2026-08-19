@@ -1,0 +1,97 @@
+{
+  "label": "base",
+  "date": "2026-08-19T18:11:00.712Z",
+  "seeds": [
+    101,
+    202,
+    303
+  ],
+  "runSeconds": 150,
+  "order": [
+    "walls1",
+    "battery1",
+    "suspension1",
+    "walls2",
+    "battery2",
+    "suspension2",
+    "walls3",
+    "battery3"
+  ],
+  "points": [
+    {
+      "bought": 0,
+      "upgrades": {
+        "walls": 0,
+        "battery": 0,
+        "suspension": 0
+      },
+      "coins": 1793,
+      "score": 7173,
+      "seconds": 78.7,
+      "unloads": 5,
+      "drops": 10.7,
+      "errors": []
+    },
+    {
+      "bought": 2,
+      "upgrades": {
+        "walls": 1,
+        "battery": 1,
+        "suspension": 0
+      },
+      "coins": 2913,
+      "score": 11653,
+      "seconds": 110.3,
+      "unloads": 8.3,
+      "drops": 13.3,
+      "errors": []
+    },
+    {
+      "bought": 4,
+      "upgrades": {
+        "walls": 2,
+        "battery": 1,
+        "suspension": 1
+      },
+      "coins": 3020,
+      "score": 12080,
+      "seconds": 115.8,
+      "unloads": 8.7,
+      "drops": 15,
+      "errors": []
+    },
+    {
+      "bought": 6,
+      "upgrades": {
+        "walls": 2,
+        "battery": 2,
+        "suspension": 2
+      },
+      "coins": 3117,
+      "score": 12467,
+      "seconds": 115.3,
+      "unloads": 9,
+      "drops": 15.7,
+      "errors": []
+    },
+    {
+      "bought": 8,
+      "upgrades": {
+        "walls": 3,
+        "battery": 3,
+        "suspension": 2
+      },
+      "coins": 3113,
+      "score": 12453,
+      "seconds": 120.7,
+      "unloads": 9.7,
+      "drops": 15.7,
+      "errors": []
+    }
+  ],
+  "baseCoins": 1793,
+  "fullCoins": 3113,
+  "totalGrowth": 1.736,
+  "growthPerPurchase": 1.0714,
+  "errors": []
+}
