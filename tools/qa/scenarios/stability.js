@@ -2,11 +2,6 @@
    Сценарии S1-S5 и S10 из плана QA. Прогоняется до и после каждой правки физики —
    без замера «до» непонятно, что именно дала правка.
 
-   Пороги пересмотрены на этапе 8.1 (ADR-0007): груз больше не приклеен к кузову,
-   и «ноль потерь на спокойной езде» перестало быть достижимой целью. Новые пороги
-   мягкие и выбраны разработчиком до подбора чисел: S1 = 0-1, S3 = 2-4, S4 = 1-3.
-   Разброс между прогонами около одной коробки — сравнивать имеет смысл серии.
-
    Запуск: node tools/qa/scenarios/stability.js [метка]
    Метка попадает в имя отчёта: stability-<метка>.json */
 
@@ -31,9 +26,6 @@ async function centerCart(g) {
     s.cart.vx = 0;
     s.holdTime = 0;
     s.holdDir = 0;
-    // Кузов стал физическим телом (этап 8.1): после телепорта у него остаётся
-    // прежняя скорость, и замер начинался бы с уже разогнанной тележки
-    s.matter.body.setVelocity(s.cartBody, { x: 0, y: 0 });
   });
 }
 
@@ -251,14 +243,14 @@ async function main() {
     ? +(summary.s5_shift_small / summary.s5_shift_large).toFixed(2) : null;
 
   console.log(`\n=== ${label} ===`);
-  console.log(`S0 вместимость: осталось из 14:         ${summary.s0_capacity_left}   (цель >= 6)`);
-  console.log(`S1 спокойная езда, потеряно из 10:      ${summary.s1_calm_lost}   (цель 0-1)`);
+  console.log(`S0 вместимость: осталось из 14:         ${summary.s0_capacity_left}   (цель >= 8)`);
+  console.log(`S1 спокойная езда, потеряно из 10:      ${summary.s1_calm_lost}   (цель 0)`);
   console.log(`S2 покой 8 с, макс. дрейф px:           ${summary.s2_rest_maxDrift}   (цель < 2)`);
   console.log(`S2 покой, потеряно само собой:          ${summary.s2_rest_lost}   (цель 0)`);
-  console.log(`S3 разворот на ходу, потеряно из 10:    ${summary.s3_turn_lost}   (цель 2-4)`);
+  console.log(`S3 разворот на ходу, потеряно из 10:    ${summary.s3_turn_lost}   (цель 1-3)`);
   console.log(`S3б разворот на ЗАДНЕЙ, потеряно из 10:  ${summary.s3b_turn_back_lost}   (цель 1-3, как спереди)`);
   console.log(`S3в упор в стену, потеряно из 10:       ${summary.s3c_wall_lost}   (справочно, это не манёвр)`);
-  console.log(`S4 смена рельсы, потеряно из 8:         ${summary.s4_rail_lost}   (цель 1-3)`);
+  console.log(`S4 смена рельсы, потеряно из 8:         ${summary.s4_rail_lost}   (цель 1-2)`);
   const s5ok = summary.s5_ratio && (summary.s5_ratio >= 1.5 || summary.s5_ratio <= 0.67);
   console.log(`S5 сдвиг small / large:                 ${summary.s5_shift_small} / ${summary.s5_shift_large} = ${summary.s5_ratio}   (различимо: ${s5ok ? 'да' : 'НЕТ'})`);
   console.log(`S10 ошибка площади тела:                ${summary.s10_maxRelError}   (цель < 1e-6)`);

@@ -20,15 +20,14 @@ async function main() {
   ok('конфиг доехал до Matter', engine.gravityY === 1,
     `итерации ${engine.positionIterations}/${engine.velocityIterations}, сон ${engine.enableSleeping}`);
 
-  // Находка Н1: трение у частей составного тела, а не у родителя
-  // До этапа 8.1 единицу тут ставил сам Matter: он перезаписывает friction у
-  // статичного тела. Кузов стал динамическим, и значение теперь наше —
-  // CONFIG.physics.inertia.cartFloorFriction
+  // Находка Н1: трение у частей составного тела, а не у родителя.
+  // Кузов статичен, поэтому единицу тут ставит сам Matter — он перезаписывает
+  // friction у статичного тела, и число из CONFIG до контактов не доходит
   const friction = await g.qa('cartFriction');
   const partsOk = friction.parts.every(f => f > 0.3);
   ok('трение кузова доходит до контактов', partsOk,
     `родитель ${friction.parent}, части [${friction.parts.join(', ')}], ` +
-    `инерция ${friction.cargoInertia}`);
+    `статичный ${friction.isStatic}`);
 
   // Ловля и сдача
   await g.pauseSpawn(true);
