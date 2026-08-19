@@ -1161,8 +1161,8 @@ class GameScene extends Phaser.Scene {
 
     const p = CONFIG.physics;
     const obj = this.matter.add.image(x, -sizePx, texture, null, {
-      friction: CONFIG.physics.boxFriction,
-      frictionStatic: CONFIG.physics.boxFrictionStatic,
+      friction: p.boxFriction,
+      frictionStatic: p.boxFrictionStatic,
       frictionAir: p.boxFrictionAir,
       restitution: p.boxRestitution,
       slop: p.contactSlop,
