@@ -63,7 +63,6 @@ const CONFIG = {
     sleeper:   0x4a4e54,
     glowBack:  0x3d7ad6,   // холодная подсветка задней рельсы
     glowFront: 0xe8b33a,   // тёплая подсветка передней
-    outline:   0x1c1f23,   // обводка ярлыка цены: отделяет цифру от любого фона
     boxBlue:   0x3d7ad6,
     boxYellow: 0xe8b33a,
     danger:    0xd64545,   // низкий XP, потеря груза, бомбы
@@ -199,7 +198,6 @@ const CONFIG = {
 
   // HUD
   hud: {
-    priceStroke: 5,       // обводка ярлыка цены сдачи, px
     xpBarWidth: 240,
     xpBarHeight: 18,
     hintDuration: 10000,   // мс, сколько висит подсказка клавиш (и сколько держится по H)
@@ -1541,10 +1539,7 @@ class GameScene extends Phaser.Scene {
 
   // Всплывающее число над тележкой: сдача груза и потеря груза
   showPopup(text, color) {
-    // Выше ярлыка цены, иначе «+400» при сдаче ложится ровно на него
-    const y = this.cargoPrice.visible
-      ? Math.min(this.cart.y - 60, this.cargoPrice.y - 30)
-      : this.cart.y - 60;
+    const y = this.cart.y - 60;
 
     const label = this.add.text(this.cart.x, y, text,
       textStyle(22, color, true)).setOrigin(0.5).setDepth(20);
@@ -1652,18 +1647,6 @@ class GameScene extends Phaser.Scene {
     this.xpText = this.add.text(24 + h.xpBarWidth, 14, '',
       textStyle(15, CONFIG.colors.textDim)).setDepth(20);
 
-    // Цена сдачи висит над кузовом, а не в углу HUD: решение «сдать или взять ещё»
-    // принимается глазами на тележке, туда же должна смотреть и цифра.
-    // Количество коробок не пишем — оно видно и так, коробки лежат физически.
-    //
-    // Обводка обязательна. По глубине ярлык и так выше теней (20 против 3-9), но
-    // колонка-тень падающей коробки проходит ровно через цифру, и её край резал
-    // цифры пополам: жёлтое на тёмно-сером с одной стороны и на почти чёрном с
-    // другой. Обводка отделяет число от любого фона — и от тени, и от самих коробок
-    this.cargoPrice = this.add.text(0, 0, '', textStyle(24, CONFIG.colors.text, true))
-      .setOrigin(0.5, 1).setDepth(20).setVisible(false)
-      .setStroke(hex(CONFIG.colors.outline), CONFIG.hud.priceStroke);
-
     // Счёт — главная цифра забега, крупно по центру. Коробки проходят за ним
     this.scoreText = this.add.text(width / 2, 10, '0',
       textStyle(36, CONFIG.colors.text, true)).setOrigin(0.5, 0).setDepth(20);
@@ -1696,24 +1679,6 @@ class GameScene extends Phaser.Scene {
     this.hintTimer = this.time.delayedCall(CONFIG.hud.hintDuration, () => {
       this.hintFade = this.tweens.add({ targets: this.hint, alpha: 0, duration: 600 });
     });
-  }
-
-  // Ярлык встаёт над ВЕРХНЕЙ коробкой штабеля, а не на фиксированной высоте:
-  // иначе высокий штабель залезал бы прямо на цифру
-  updateCargoPrice() {
-    if (this.cargo.length === 0) {
-      this.cargoPrice.setVisible(false);
-      return;
-    }
-
-    const top = this.cargo.reduce(
-      (min, box) => Math.min(min, box.y - box.displayHeight / 2), this.cart.y);
-
-    this.cargoPrice
-      .setVisible(true)
-      .setPosition(this.cart.x, top - 10)
-      .setText(String(this.cargoValue()))
-      .setColor(hex(this.cargoTint()));
   }
 
   xpRatio() {
@@ -1757,8 +1722,6 @@ class GameScene extends Phaser.Scene {
     this.drawXpBar();
     this.xpText.setText(`${this.run.xp} / ${this.run.maxXp} XP`);
     this.scoreText.setText(String(this.run.score));
-
-    this.updateCargoPrice();
   }
 
   pauseGame() {

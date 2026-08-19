@@ -1,0 +1,239 @@
+{
+  "summary": {
+    "label": "clean",
+    "date": "2026-08-19T09:31:34.872Z",
+    "bot8": {
+      "runs": 3,
+      "score": 3227,
+      "scoreMin": 0,
+      "scoreMax": 6760,
+      "seconds": 56.3,
+      "unloads": 2.7,
+      "avgUnloadSize": 8,
+      "maxUnloadSize": 8,
+      "dodges": 6.3,
+      "drops": 9.7,
+      "misses": 3.7,
+      "timedOut": 0
+    },
+    "bot5": {
+      "runs": 2,
+      "score": 16363,
+      "scoreMin": 12600,
+      "scoreMax": 20125,
+      "seconds": 179,
+      "unloads": 29.5,
+      "avgUnloadSize": 5,
+      "maxUnloadSize": 5,
+      "dodges": 29,
+      "drops": 14,
+      "misses": 22.5,
+      "timedOut": 1
+    },
+    "currentPrices": [
+      [
+        3000,
+        9000,
+        24000
+      ],
+      [
+        4800,
+        12000,
+        30000
+      ],
+      [
+        6000,
+        18000
+      ]
+    ],
+    "currentProgression": {
+      "firstBuyAfterRun": 1,
+      "allBoughtAfterRun": 34,
+      "total": 106800
+    },
+    "proportionSum": 17800,
+    "wantedMultiplier": 2,
+    "proposedPrices": [
+      [
+        1000,
+        3000,
+        8000
+      ],
+      [
+        1600,
+        4000,
+        10000
+      ],
+      [
+        2000,
+        6000
+      ]
+    ],
+    "proposedProgression": {
+      "firstBuyAfterRun": 1,
+      "allBoughtAfterRun": 12,
+      "total": 35600
+    },
+    "errors": []
+  },
+  "rows": [
+    {
+      "seed": 101,
+      "unloadAt": 8,
+      "score": 2920,
+      "elapsed": 46731,
+      "over": true,
+      "currency": 2920,
+      "bestScore": 2920,
+      "unloads": 2,
+      "sizes": [
+        8,
+        8
+      ],
+      "railSwitches": 13,
+      "dodges": 0,
+      "drops": 10,
+      "misses": 2,
+      "timedOut": false,
+      "errors": []
+    },
+    {
+      "seed": 202,
+      "unloadAt": 8,
+      "score": 6760,
+      "elapsed": 101073,
+      "over": true,
+      "currency": 6760,
+      "bestScore": 6760,
+      "unloads": 6,
+      "sizes": [
+        8,
+        8,
+        8,
+        8,
+        8,
+        8
+      ],
+      "railSwitches": 20,
+      "dodges": 19,
+      "drops": 12,
+      "misses": 9,
+      "timedOut": false,
+      "errors": []
+    },
+    {
+      "seed": 303,
+      "unloadAt": 8,
+      "score": 0,
+      "elapsed": 21099,
+      "over": true,
+      "currency": 0,
+      "bestScore": 0,
+      "unloads": 0,
+      "sizes": [],
+      "railSwitches": 8,
+      "dodges": 0,
+      "drops": 7,
+      "misses": 0,
+      "timedOut": false,
+      "errors": []
+    }
+  ],
+  "cautious": [
+    {
+      "seed": 101,
+      "unloadAt": 5,
+      "score": 12600,
+      "elapsed": 156732,
+      "over": true,
+      "currency": 12600,
+      "bestScore": 12600,
+      "unloads": 23,
+      "sizes": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "railSwitches": 57,
+      "dodges": 44,
+      "drops": 13,
+      "misses": 16,
+      "timedOut": false,
+      "errors": []
+    },
+    {
+      "seed": 202,
+      "unloadAt": 5,
+      "score": 20125,
+      "elapsed": 201324,
+      "over": false,
+      "currency": 0,
+      "bestScore": 0,
+      "unloads": 36,
+      "sizes": [
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5,
+        5
+      ],
+      "railSwitches": 82,
+      "dodges": 14,
+      "drops": 15,
+      "misses": 29,
+      "timedOut": true,
+      "errors": []
+    }
+  ]
+}
