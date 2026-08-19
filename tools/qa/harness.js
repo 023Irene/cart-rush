@@ -338,16 +338,38 @@ function initScript({ seed, save }) {
       const opt = Object.assign({ unloadAt: 8, dodge: 70, tickMs: 50, startAt: 2000, stopAt: 0 }, options || {});
       const s = this.scene();
       this.botStats = { unloads: 0, sizes: [], railSwitches: 0, dodges: 0, drops: 0, misses: 0,
+                        xpDrops: 0, xpMisses: 0, xpSpent: 0,
                         ticks: 0, startedGame: opt.startAt, startedWall: Date.now() };
       this.botTarget = null;
 
-      // Считаем, на чём именно утекает XP: потери груза за борт или промахи
-      const stats = this.botStats;
+      // Считаем, на чём именно утекает XP. Не только сколько РАЗ — но и сколько XP:
+      // промахов на порядок больше, чем потерь груза, но стоят они по −5..−18
+      // против −30..−150, и без сумм непонятно, что на самом деле добивает забег.
+      //
+      // Обёртка читает this.botStats через замыкание на qa, а не через снимок:
+      // иначе второй startBot в той же странице продолжил бы писать в статистику
+      // предыдущего забега
+      const qa = this;
       if (!s.__origDrop) {
         s.__origDrop = s.penalizeDrop;
-        s.penalizeDrop = function (amount) { stats.drops++; return s.__origDrop.call(s, amount); };
+        s.penalizeDrop = function (amount) {
+          qa.botStats.drops++;
+          qa.botStats.xpDrops += amount;
+          return s.__origDrop.call(s, amount);
+        };
         s.__origMiss = s.penalizeMiss;
-        s.penalizeMiss = function (a, x, y) { stats.misses++; return s.__origMiss.call(s, a, x, y); };
+        s.penalizeMiss = function (a, x, y) {
+          qa.botStats.misses++;
+          qa.botStats.xpMisses += a;
+          return s.__origMiss.call(s, a, x, y);
+        };
+        // Бомба списывает XP напрямую через spendXp, минуя оба метода выше.
+        // Общая сумма нужна, чтобы её долю можно было получить вычитанием
+        s.__origSpend = s.spendXp;
+        s.spendXp = function (amount) {
+          qa.botStats.xpSpent += amount;
+          return s.__origSpend.call(s, amount);
+        };
       }
 
       const keys = s.keys;
@@ -457,6 +479,10 @@ function initScript({ seed, save }) {
       st.wallMs = wallMs;
       st.timeRatio = wallMs ? +(gameMs / wallMs).toFixed(3) : null;
       st.ticksPerGameSec = gameMs ? +(st.ticks / (gameMs / 1000)).toFixed(2) : null;
+
+      // Бомбы списывают XP мимо penalizeDrop и penalizeMiss — их доля получается
+      // вычитанием. Отрицательной она стать не может: spendXp зовут только эти трое
+      st.xpBombs = Math.max(0, st.xpSpent - st.xpDrops - st.xpMisses);
       return st;
     },
 

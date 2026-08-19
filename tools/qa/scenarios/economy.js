@@ -34,6 +34,9 @@ async function playOnce(seed, unloadAt) {
   return { seed, unloadAt, ...result, errors };
 }
 
+const share = (part, total) => (total ? Math.round((part / total) * 100) : 0);
+const perMinute = (value, seconds) => (seconds ? +(value / (seconds / 60)).toFixed(0) : 0);
+
 // Разброс в процентах от минимума: одно число вместо пары «мин-макс»
 function spread(min, max) {
   if (!min || !isFinite(min) || !isFinite(max)) return 0;
@@ -70,6 +73,14 @@ function stats(rows) {
     dodges: +mean(nums('dodges')).toFixed(1),
     drops: +mean(nums('drops')).toFixed(1),
     misses: +mean(nums('misses')).toFixed(1),
+
+    // Бюджет XP: на что забег его потратил. Промахов на порядок больше, чем
+    // потерь груза, но стоят они впятеро дешевле — без сумм непонятно, что
+    // на самом деле добивает игрока
+    xpDrops: Math.round(mean(nums('xpDrops'))),
+    xpMisses: Math.round(mean(nums('xpMisses'))),
+    xpBombs: Math.round(mean(nums('xpBombs'))),
+    xpSpent: Math.round(mean(nums('xpSpent'))),
     timedOut: rows.filter(r => r.timedOut).length
   };
 }
@@ -215,6 +226,12 @@ async function main() {
   console.log(`\n=== экономика: ${label} ===`);
   console.log(`Бот, сдача по 8:  счёт ${main8.score} (${main8.scoreMin}-${main8.scoreMax}), забег ${main8.seconds} с, сдач ${main8.unloads} по ${main8.avgUnloadSize} коробки`);
   console.log(`  потери груза за борт ${main8.drops}, промахов ${main8.misses} за забег`);
+  console.log(`Бюджет XP за забег: всего −${main8.xpSpent}` +
+    ` = груз за борт −${main8.xpDrops} (${share(main8.xpDrops, main8.xpSpent)} %)` +
+    ` + промахи −${main8.xpMisses} (${share(main8.xpMisses, main8.xpSpent)} %)` +
+    ` + бомбы −${main8.xpBombs} (${share(main8.xpBombs, main8.xpSpent)} %)`);
+  console.log(`  утечка ${perMinute(main8.xpSpent, main8.seconds)} XP/мин при ` +
+    `${perMinute(main8.misses, main8.seconds)} промахах/мин`);
   console.log(`Бот, сдача по 5:  счёт ${main5.score}, забег ${main5.seconds} с, потерь ${main5.drops}, промахов ${main5.misses}`);
   console.log(`Монет за забег:   ${main8.coins} (${main8.coinsMin}-${main8.coinsMax}) `
     + `— именно они покупают магазин`);
