@@ -72,8 +72,11 @@ function startServer() {
 function initScript({ seed, save }) {
   // Детерминизм: Math.random в игре разыгрывает размер, рельсу, X, бомбу,
   // подкрутку и разлёт. С сидом два прогона одного сценария сравнимы попарно
-  if (seed !== null && seed !== undefined) {
-    let state = seed >>> 0;
+  // Пересев доступен и позже: генератор сеется при загрузке страницы, а до старта
+  // забега успевает сдвинуться на разное число выборок — сколько кадров провисело
+  // меню, столько и сдвиг. Замер обязан начинать забег с известного состояния
+  window.__setSeed = function (value) {
+    let state = value >>> 0;
     Math.random = function () {
       state |= 0;
       state = (state + 0x6d2b79f5) | 0;
@@ -81,7 +84,9 @@ function initScript({ seed, save }) {
       t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
       return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
     };
-  }
+    return value;
+  };
+  if (seed !== null && seed !== undefined) window.__setSeed(seed);
 
   // Прогресс задаётся до старта: апгрейды меняют физику, и замер обязан знать,
   // с какими бортами он сделан
@@ -227,6 +232,71 @@ function initScript({ seed, save }) {
       return true;
     },
 
+    reseed(value) { return window.__setSeed(value); },
+
+    // Пересев ровно в момент рождения забега. Звать reseed() снаружи мало: между
+    // командой «старт» и командой «пересей» проходит реальное время, за него
+    // успевает нападать разное число коробок, и они уже разошлись. Здесь пересев
+    // прибит к create() сцены, то есть к точке, одинаковой во всех прогонах
+    armSeed(value) {
+      const sc = window.__game.scene.getScene('GameScene');
+      window.__armedSeed = value;
+      if (!sc.__seedArmed) {
+        sc.__seedArmed = true;
+        const origCreate = sc.create.bind(sc);
+        sc.create = function () {
+          if (window.__armedSeed !== null) window.__setSeed(window.__armedSeed);
+          return origCreate();
+        };
+      }
+      return value;
+    },
+
+    botCapped() { return !!(this.botStats && this.botStats.capped); },
+
+    // Детерминированный шаг. Сид подменяет Math.random, но кадровую дельту он не
+    // трогает: Matter шагает на том, что дал браузер, штабель садится каждый раз
+    // чуть иначе, и один и тот же сид давал разброс счёта до 16 %. Проверено —
+    // три прогона сида 101 дали 4325 / 3800 / 4400 при одинаковых 1206 тиках бота.
+    //
+    // Здесь мы останавливаем RAF и гоним game.loop.step() сами, отмеряя время
+    // синтетическими часами. smoothStep обязателен к выключению: он усредняет
+    // дельту по истории кадров и вернул бы плавающее значение обратно.
+    //
+    // rate — как часто шагаем в РЕАЛЬНОМ времени. Меньше 16 мс означает, что
+    // игровая секунда проходит быстрее реальной: замеры идут быстрее, а результат
+    // от этого не зависит вовсе — в том и смысл фиксированного шага
+    fixedStep(options) {
+      if (this.__fixedTimer) return false;
+      const o = Object.assign({ stepMs: 1000 / 60, rate: 4 }, options || {});
+      const loop = window.__game.loop;
+
+      loop.smoothStep = false;
+      loop.stop();
+
+      // Самопланирующийся таймаут, а НЕ setInterval. Шаг с решателем 12/8 и
+      // подписчиками на кадр занимает больше нескольких миллисекунд, и setInterval
+      // копил очередь: страница переставала отдавать управление, CDP не мог до неё
+      // достучаться, и puppeteer падал с detached Frame. Здесь следующий шаг
+      // планируется только после того, как отработал предыдущий
+      let t = loop.time || 0;
+      const pump = () => {
+        if (!this.__fixedTimer) return;
+        t += o.stepMs;
+        loop.step(t);
+        this.__fixedTimer = setTimeout(pump, o.rate);
+      };
+      this.__fixedTimer = setTimeout(pump, o.rate);
+      return true;
+    },
+
+    fixedStepOff() {
+      if (!this.__fixedTimer) return false;
+      clearTimeout(this.__fixedTimer);
+      this.__fixedTimer = null;
+      return true;
+    },
+
     // XP восстанавливается между замерами: серия потерь оборвала бы забег
     // на середине сценария, и мерить стало бы нечего
     refillXp() {
@@ -261,9 +331,10 @@ function initScript({ seed, save }) {
     // Стратегия простая и человеческая: едем к ближайшей достижимой коробке
     // своей рельсы, уворачиваемся от бомбы, сдаём груз на заданном размере
     startBot(options) {
-      const opt = Object.assign({ unloadAt: 8, dodge: 70, tickMs: 50 }, options || {});
+      const opt = Object.assign({ unloadAt: 8, dodge: 70, tickMs: 50, startAt: 2000, stopAt: 0 }, options || {});
       const s = this.scene();
-      this.botStats = { unloads: 0, sizes: [], railSwitches: 0, dodges: 0, drops: 0, misses: 0 };
+      this.botStats = { unloads: 0, sizes: [], railSwitches: 0, dodges: 0, drops: 0, misses: 0,
+                        ticks: 0, startedGame: opt.startAt, startedWall: Date.now() };
       this.botTarget = null;
 
       // Считаем, на чём именно утекает XP: потери груза за борт или промахи
@@ -281,8 +352,35 @@ function initScript({ seed, save }) {
         keys.right.isDown = dir === 1;
       };
 
-      this.botTimer = setInterval(() => {
+      // Решения привязаны к ИГРОВЫМ часам, а не к моменту вызова startBot.
+      // Раньше бот начинал играть тогда, когда до страницы доходила команда по CDP,
+      // а это реальное время: замер показал старт на игровой мс 1900, 1983 и 1950 у
+      // одного и того же сида. Восьмидесяти миллисекунд хватало, чтобы бот погнался
+      // за другой коробкой, и дальше расхождение только росло — отсюда и брался
+      // разброс счёта 15 % при одинаковом сиде.
+      //
+      // Теперь проверка идёт каждый кадр, а действие происходит на фиксированной
+      // сетке игрового времени: startAt, startAt + tickMs, startAt + 2*tickMs, ...
+      let nextTick = opt.startAt;
+
+      const tick = () => {
         if (!this.alive()) return;
+        if (s.run.elapsed < nextTick) return;
+        while (nextTick <= s.run.elapsed) nextTick += opt.tickMs;
+
+        // Потолок забега снимается ЗДЕСЬ, на кадре, а не опросом снаружи. Опрос
+        // идёт раз в две секунды реального времени, а игра под фиксированным шагом
+        // бежит быстрее — обрыв попадал на разную игровую миллисекунду, и два
+        // прогона одного сида расходились именно на этом
+        if (opt.stopAt && s.run.elapsed >= opt.stopAt && !this.botStats.capped) {
+          this.botStats.capped = true;
+          this.botStats.cappedScore = s.run.score;
+          this.botStats.cappedElapsed = Math.round(s.run.elapsed);
+          press(0);
+        }
+        if (this.botStats.capped) return;
+
+        this.botStats.ticks++;
 
         const cart = s.cart;
         const mine = s.fallingBoxes.filter(b => b.boxData.rail === cart.rail);
@@ -328,16 +426,33 @@ function initScript({ seed, save }) {
         // за точным совпадением центров незачем, а каждый доворот бьёт по грузу
         const delta = target.x - cart.x;
         press(Math.abs(delta) < 40 ? 0 : Math.sign(delta));
-      }, opt.tickMs);
+      };
+
+      // Слушаем кадр, а не таймер. Таймер Phaser отсчитывает delay от момента
+      // создания, то есть его фаза тоже зависела бы от того, когда пришла команда
+      this.botTick = tick;
+      s.events.on('update', tick);
 
       return true;
     },
 
     stopBot() {
-      clearInterval(this.botTimer);
       const s = this.scene();
+      if (this.botTick && s) { s.events.off('update', this.botTick); }
+      this.botTick = null;
       if (s && s.keys) { s.keys.left.isDown = false; s.keys.right.isDown = false; }
-      return this.botStats;
+
+      // Часы бота против часов игры: ticksPerGameSec обязан равняться 1000 / tickMs.
+      // Отклонение означает, что бот принял не то число решений на игровую секунду,
+      // и сравнивать такой прогон с другим нельзя
+      const st = this.botStats;
+      const gameMs = (s ? s.run.elapsed : st.startedGame) - st.startedGame;
+      const wallMs = Date.now() - st.startedWall;
+      st.gameMs = Math.round(gameMs);
+      st.wallMs = wallMs;
+      st.timeRatio = wallMs ? +(gameMs / wallMs).toFixed(3) : null;
+      st.ticksPerGameSec = gameMs ? +(st.ticks / (gameMs / 1000)).toFixed(2) : null;
+      return st;
     },
 
     // Итог забега: счёт, длительность, что накопилось в сохранении
@@ -428,21 +543,42 @@ class Harness {
   clearFalling() { return this.qa('clearFalling'); }
   refillXp() { return this.qa('refillXp'); }
   startBot(opts) { return this.qa('startBot', opts); }
+  reseed(value) { return this.qa('reseed', value); }
+  armSeed(value) { return this.qa('armSeed', value); }
+  fixedStep(opts) { return this.qa('fixedStep', opts); }
+  fixedStepOff() { return this.qa('fixedStepOff'); }
   stopBot() { return this.qa('stopBot'); }
   runResult() { return this.qa('runResult'); }
 
   // Забег ботом до конца XP или до потолка по времени
+  // Потолок забега считается в ИГРОВОМ времени, а не в реальном. Иначе два прогона
+  // одной сборки обрывались на разной игровой секунде — под нагрузкой игра отстаёт
+  // от часов, — и сравнивать их счёт было нельзя. Реальные часы остаются только
+  // страховкой от зависшей страницы: втрое дольше игрового потолка
+  // Потолок забега задаётся боту и снимается им НА КАДРЕ, в точной игровой
+  // миллисекунде. Опрос отсюда идёт по реальным часам и годится только на то,
+  // чтобы заметить, что всё кончилось; сам результат берётся из снимка, сделанного
+  // в момент обрыва, — иначе счёт дочитывался бы в случайный игровой момент.
+  // Реальные часы остаются страховкой от зависшей страницы
   async playRun({ unloadAt = 8, timeoutMs = 300000 } = {}) {
-    await this.startBot({ unloadAt });
-    const started = Date.now();
-    while (Date.now() - started < timeoutMs) {
-      await this.wait(2000);
-      const alive = await this.qa('alive');
-      if (!alive) break;
+    await this.startBot({ unloadAt, stopAt: timeoutMs });
+    const wallCap = Math.max(60000, timeoutMs * 3);
+    const startedWall = Date.now();
+    let hung = false;
+
+    for (;;) {
+      await this.wait(1000);
+      if (!await this.qa('alive')) break;
+      if ((await this.qa('botCapped'))) break;
+      if (Date.now() - startedWall >= wallCap) { hung = true; break; }
     }
+
     const stats = await this.stopBot();
-    const result = await this.runResult();
-    return { ...result, ...stats, timedOut: Date.now() - started >= timeoutMs };
+    const live = await this.runResult();
+    const result = stats.capped
+      ? { ...live, score: stats.cappedScore, elapsed: stats.cappedElapsed }
+      : live;
+    return { ...result, ...stats, timedOut: !!stats.capped, hung };
   }
   freezeXp(flag) { return this.qa('freezeXp', flag); }
 

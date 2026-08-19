@@ -16,8 +16,17 @@ const label = process.argv[2] || 'current';
 const SEEDS = ALL_SEEDS.slice(0, Number(process.argv[3]) || ALL_SEEDS.length);
 const RUN_TIMEOUT = (Number(process.argv[4]) || 300) * 1000;
 
+// Три условия воспроизводимости — без любого из них один сид даёт разные забеги:
+//   1. fixedStep    — шаг физики постоянный, а не тот, что дал браузер;
+//   2. armSeed до startRun — генератор пересевается внутри create() сцены, то есть
+//      в точке, одинаковой во всех прогонах;
+//   3. бот на игровой сетке времени (в harness) — иначе он вступал в игру на
+//      разной игровой миллисекунде, потому что команда идёт по CDP реальное время.
+// Проверено: три прогона сида 101 дают ровно 3250 очков против разброса 33 % до правки
 async function playOnce(seed, unloadAt) {
   const g = await launch({ seed });
+  await g.fixedStep({ rate: 8 });
+  await g.armSeed(seed);
   await g.startRun();
   const result = await g.playRun({ unloadAt, timeoutMs: RUN_TIMEOUT });
   const errors = g.errors.slice(0, 3);
@@ -35,6 +44,13 @@ function stats(rows) {
     scoreMin: Math.min(...nums('score')),
     scoreMax: Math.max(...nums('score')),
     seconds: +(mean(nums('elapsed')) / 1000).toFixed(1),
+
+    // Часы бота против часов игры. tickMs = 50, значит ticksPerGameSec обязан
+    // быть около 20; отклонение означает, что бот принимал не то число решений
+    // на игровую секунду, и сравнивать такой прогон с другим нельзя
+    wallSeconds: +(mean(nums('wallMs')) / 1000).toFixed(1),
+    timeRatio: +mean(nums('timeRatio')).toFixed(3),
+    ticksPerGameSec: +mean(nums('ticksPerGameSec')).toFixed(2),
     unloads: +mean(nums('unloads')).toFixed(1),
     avgUnloadSize: +mean(sizes).toFixed(1),
     maxUnloadSize: sizes.length ? Math.max(...sizes) : 0,
@@ -45,22 +61,42 @@ function stats(rows) {
   };
 }
 
-// Сколько забегов нужно, чтобы скупить магазин при таком доходе
-function progression(scorePerRun, prices) {
+// Сколько забегов нужно, чтобы скупить магазин при таком доходе.
+//
+// growth — насколько растёт доход с каждой покупкой. Ноль означает «доход
+// постоянный», и это ЗАВЕДОМО пессимистично: высокие борта держат больше груза,
+// аккумулятор удлиняет забег, подвеска бережёт штабель — каждая покупка поднимает
+// счёт следующего забега. При growth = 0 число забегов получается верхней границей,
+// а не оценкой. Точная модель требует замера дохода на каждом уровне улучшений;
+// пока вместо неё считаем вилку по нескольким значениям роста
+function progression(scorePerRun, prices, growth = 0) {
   const all = prices.flat().sort((a, b) => a - b);
   const total = all.reduce((a, b) => a + b, 0);
   let coins = 0;
   let runs = 0;
+  let income = scorePerRun;
   const bought = [];
   while (bought.length < all.length && runs < 500) {
     runs++;
-    coins += scorePerRun;
+    coins += income;
     while (bought.length < all.length && coins >= all[bought.length]) {
       coins -= all[bought.length];
       bought.push(runs);
+      income *= 1 + growth;
     }
   }
-  return { firstBuyAfterRun: bought[0] || null, allBoughtAfterRun: bought[bought.length - 1] || null, total };
+  return {
+    growth,
+    firstBuyAfterRun: bought[0] || null,
+    allBoughtAfterRun: bought[bought.length - 1] || null,
+    total
+  };
+}
+
+// Вилка: доход постоянный (верхняя граница числа забегов) и доход растёт на
+// 15 % с покупки. Пока нет замера по уровням улучшений, честнее показывать обе
+function progressionRange(scorePerRun, prices) {
+  return [0, 0.15].map(g => progression(scorePerRun, prices, g));
 }
 
 async function main() {
@@ -89,11 +125,13 @@ async function main() {
   const current = [[3000, 9000, 24000], [4800, 12000, 30000], [6000, 18000]];
 
   const now = progression(main8.score, current);
+  const nowRange = progressionRange(main8.score, current);
   // Цель дизайна из спеки: первая покупка после первого забега, весь магазин ~к десятому
   const proportionSum = proportions.flat().reduce((a, b) => a + b, 0);
   const wantedMultiplier = Math.round((main8.score * 10) / proportionSum);
   const proposed = proportions.map(line => line.map(v => v * wantedMultiplier));
   const after = progression(main8.score, proposed);
+  const afterRange = progressionRange(main8.score, proposed);
 
   const summary = {
     label,
@@ -102,10 +140,12 @@ async function main() {
     bot5: main5,
     currentPrices: current,
     currentProgression: now,
+    currentProgressionRange: nowRange,
     proportionSum,
     wantedMultiplier,
     proposedPrices: proposed,
     proposedProgression: after,
+    proposedProgressionRange: afterRange,
     errors: rows.flatMap(r => r.errors)
   };
 
@@ -114,7 +154,8 @@ async function main() {
   console.log(`  потери груза за борт ${main8.drops}, промахов ${main8.misses} за забег`);
   console.log(`Бот, сдача по 5:  счёт ${main5.score}, забег ${main5.seconds} с, потерь ${main5.drops}, промахов ${main5.misses}`);
   console.log(`Замер спеки был:  10 500 очков за 150-170 с`);
-  console.log(`\nЦены сейчас (сумма ${now.total}): первая покупка после забега ${now.firstBuyAfterRun}, весь магазин к ${now.allBoughtAfterRun}-му`);
+  console.log(`\nЦены сейчас (сумма ${now.total}): первая покупка после забега ${now.firstBuyAfterRun}, весь магазин к ${nowRange[1].allBoughtAfterRun}-${nowRange[0].allBoughtAfterRun}-му`);
+  console.log(`  (вилка: доход постоянный ${nowRange[0].allBoughtAfterRun} забегов, доход +15 % с покупки — ${nowRange[1].allBoughtAfterRun})`);
   console.log(`Цель: первая покупка после 1-го, весь магазин примерно к 10-му`);
   console.log(`Множитель к пропорциям спеки: было 6, нужно ${summary.wantedMultiplier}`);
   console.log(`Предлагаемые цены: ${JSON.stringify(proposed)}`);
