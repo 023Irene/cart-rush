@@ -277,7 +277,8 @@ const CONFIG = {
 
   // Звук: сэмплы Kenney, CC0 (assets/audio/CREDITS.md)
   audio: {
-    volume: 0.6,
+    volume: 0.6,           // только значение по умолчанию: живая громкость лежит
+                           // в сохранении и правится на экране настроек (этап 8.6)
     catchCooldown: 60,     // мс между «туками» ловли: пачка коробок иначе даёт кашу
     catchVolume: 0.7,      // звук ловли играет чаще всех, поэтому он тише остальных
     catchStep: 60,         // центов вверх за каждую коробку в кузове
@@ -286,8 +287,9 @@ const CONFIG = {
     errorCooldown: 120,    // мс между звуками ошибки: взрыв выбрасывает пачку коробок сразу
     blastDetune: -700,     // взрыв бомбы — тот же error.ogg, но сильно ниже и длиннее
     boosterDetune: 400,    // подбор бустера — deliver.ogg выше обычного
-    shieldDetune: -200     // щит принял удар: тот же deliver.ogg, но ниже — событие
+    shieldDetune: -200,    // щит принял удар: тот же deliver.ogg, но ниже — событие
                            // хорошее, но звучать как награда оно не должно
+    volumeStep: 0.1        // шаг регулятора громкости на экране настроек
   },
 
   // Колонка-тень под падающим объектом: полупрозрачная полоса ровно по ширине
@@ -688,9 +690,11 @@ class BootScene extends Phaser.Scene {
     }
     makeParticleTexture(this, 'particle', 6);
 
-    // Громкость и немой режим переживают перезагрузку
+    // Громкость и немой режим переживают перезагрузку. Громкость берётся из
+    // сохранения, а не из CONFIG: с этапа 4 поле лежало в SaveManager и не читалось
+    // никем — выбор был, а ручки к нему не было (ADR-0009)
     const save = SaveManager.load();
-    this.sound.volume = CONFIG.audio.volume;
+    this.sound.volume = save.volume;
     this.sound.mute = save.muted;
 
     this.scene.start('MenuScene');
@@ -722,8 +726,11 @@ class MenuScene extends Phaser.Scene {
     makeButton(this, width / 2, 316, 'МАГАЗИН',
       () => this.scene.start('ShopScene', { from: 'MenuScene' }),
       { width: 240, height: 54, size: 22 });
+    makeButton(this, width / 2, 378, 'НАСТРОЙКИ',
+      () => this.scene.start('SettingsScene', { from: 'MenuScene' }),
+      { width: 240, height: 54, size: 22 });
 
-    drawKeyHints(this, width / 2, 396);
+    drawKeyHints(this, width / 2, 440);
 
     // Запуск игры с клавиатуры, чтобы не тянуться к мыши
     this.input.keyboard.once('keydown-SPACE', () => this.scene.start('GameScene'));
@@ -779,8 +786,10 @@ class GameScene extends Phaser.Scene {
     // На старте страницы аудиоконтекст ещё заблокирован браузером, и выставленный
     // в BootScene mute мог не примениться. Забег начинается после нажатия клавиши,
     // то есть контекст уже разблокирован — повторяем установку здесь
-    this.sound.mute = SaveManager.load().muted;
-    this.bestScore = SaveManager.load().bestScore;
+    const saved = SaveManager.load();
+    this.sound.mute = saved.muted;
+    this.sound.volume = saved.volume;
+    this.bestScore = saved.bestScore;
 
     // Положение тележки — источник истины сцены.
     // У составного тела Matter position — это центр масс, а не пол кузова,
@@ -1942,13 +1951,21 @@ class GameScene extends Phaser.Scene {
       textStyle(15, CONFIG.colors.textDim)).setDepth(20);
 
     // Активные эффекты — правый верх, под всплывашкой подбора. Без обратного отсчёта
-    // бустеры нечем оценивать: игрок не понимает, кончилось замедление или ещё нет
-    this.effectTexts = {};
+    // бустеры нечем оценивать: игрок не понимает, кончилось замедление или ещё нет.
+    //
+    // Плашка, а не просто цветной текст: HUD висит поверх поля, и надпись цветом
+    // бустера ложилась на летящие коробки того же порядка яркости. Тёмный текст
+    // на заливке своего цвета читается на любом фоне и заодно повторяет вид самого
+    // бустера — связь «поймал вот это» → «работает вот это» видна без объяснений
+    this.effectChips = {};
     ['shield', 'slow', 'rush'].forEach((key, i) => {
-      this.effectTexts[key] = this.add.text(
-        CONFIG.screen.width - 20, 56 + i * 22, '',
-        textStyle(16, hex(CONFIG.booster.types[key].color), true))
-        .setOrigin(1, 0).setDepth(20);
+      const y = 58 + i * 30;
+      const box = this.add.rectangle(CONFIG.screen.width - 16, y,
+        10, 24, CONFIG.booster.types[key].color)
+        .setOrigin(1, 0.5).setDepth(20).setVisible(false);
+      const text = this.add.text(CONFIG.screen.width - 26, y, '',
+        textStyle(16, hex(CONFIG.colors.bg), true)).setOrigin(1, 0.5).setDepth(21);
+      this.effectChips[key] = { box, text };
     });
 
     this.createHint();
@@ -2031,16 +2048,22 @@ class GameScene extends Phaser.Scene {
       : `Груз: ${this.cargo.length} шт → сдать за ${this.cargoValue()}`);
   }
 
-  // Строка на эффект: «Щит», «Замедление 4 с». У щита срока нет — он висит до бомбы
-  // или до конца holdMs, и обратный отсчёт там сбивал бы с толку: важно не сколько
-  // осталось, а есть он или нет
+  // Плашка на эффект: «Щит», «Замедление 4 с». У щита обратного отсчёта нет — он
+  // висит до бомбы или до конца holdMs, и таймер там сбивал бы с толку: важно не
+  // сколько осталось, а есть он или нет
   updateEffectHud() {
     const left = key => Math.ceil((this.effects[key] - this.run.elapsed) / 1000);
 
-    Object.entries(this.effectTexts).forEach(([key, label]) => {
-      if (!this.hasEffect(key)) return label.setText('');
+    Object.entries(this.effectChips).forEach(([key, chip]) => {
+      const active = this.hasEffect(key);
+      chip.box.setVisible(active);
+      if (!active) return chip.text.setText('');
+
       const spec = CONFIG.booster.types[key];
-      label.setText(key === 'shield' ? spec.title : `${spec.title} ${left(key)} с`);
+      chip.text.setText(key === 'shield' ? spec.title : `${spec.title} ${left(key)} с`);
+      // Ширина плашки идёт за текстом: «Замедление 6 с» и «Щит» отличаются вдвое,
+      // а фиксированная ширина по длинному оставила бы у короткого пустой хвост
+      chip.box.setSize(chip.text.width + 20, 24);
     });
   }
 
@@ -2079,23 +2102,22 @@ class PauseScene extends Phaser.Scene {
       this.scene.start('MenuScene');
     }, { width: 260, height: 58, size: 24 });
 
-    // Единственное место, где звук выключается с телефона: клавиши M там нет
-    this.muteButton = makeButton(this, width / 2, 560, this.muteLabel(),
-      () => {
-        toggleMuteSetting(this);
-        this.muteButton.text.setText(this.muteLabel());
-      }, { width: 200, height: 44, size: 18 });
+    // Звук раньше выключался прямо отсюда одной кнопкой. Теперь у него свой экран,
+    // и пауза ведёт туда: настройка одна, а мест, где её крутят, было два
+    makeButton(this, width / 2, 560, 'НАСТРОЙКИ', () => this.openSettings(),
+      { width: 200, height: 44, size: 18 });
 
     this.input.keyboard.on('keydown-ESC', () => this.resumeGame());
     this.input.keyboard.on('keydown-P', () => this.resumeGame());
-    this.input.keyboard.on('keydown-M', () => {
-      toggleMuteSetting(this);
-      this.muteButton.text.setText(this.muteLabel());
-    });
+    // Клавиша M работает и на паузе — она быстрее, чем идти в настройки
+    this.input.keyboard.on('keydown-M', () => toggleMuteSetting(this));
   }
 
-  muteLabel() {
-    return SaveManager.load().muted ? 'ЗВУК ВЫКЛ' : 'ЗВУК ВКЛ';
+  // Настройки открываются НАЛОЖЕНИЕМ поверх остановленной паузы: забег под ней
+  // уже стоит, и стартовать сцены заново значило бы потерять его состояние
+  openSettings() {
+    this.scene.pause();
+    this.scene.launch('SettingsScene', { from: 'PauseScene' });
   }
 
   resumeGame() {
@@ -2165,7 +2187,6 @@ class ShopScene extends Phaser.Scene {
   init(data) {
     this.from = (data && data.from) || 'MenuScene';
     this.returnData = (data && data.returnData) || {};
-    this.confirmReset = false;
   }
 
   create() {
@@ -2186,7 +2207,10 @@ class ShopScene extends Phaser.Scene {
     makeButton(this, width / 2, 500, 'НАЗАД', () => this.goBack(),
       { width: 240, height: 54, size: 24 });
 
-    this.createResetButton(width / 2, height - 40);
+    // Сброс прогресса уехал в настройки (этап 8.6): он оказался здесь не по смыслу,
+    // а потому что магазин был последней написанной сценой
+    this.add.text(width / 2, height - 40, 'сброс прогресса — в настройках',
+      textStyle(14, CONFIG.colors.textDim)).setOrigin(0.5);
 
     this.input.keyboard.on('keydown-ESC', () => this.goBack());
   }
@@ -2258,6 +2282,102 @@ class ShopScene extends Phaser.Scene {
     this.scene.restart({ from: this.from, returnData: this.returnData });
   }
 
+}
+
+/* ============================================================================
+   SettingsScene — громкость, звук, сброс прогресса (этап 8.6, ADR-0009)
+
+   Экран открыт ADR-0009. До него громкость лежала в сохранении с этапа 4 и не
+   читалась никем, а сброс прогресса висел в магазине — не по смыслу, а потому
+   что магазин был последней написанной сценой.
+   ========================================================================= */
+class SettingsScene extends Phaser.Scene {
+  constructor() { super('SettingsScene'); }
+
+  init(data) {
+    this.from = (data && data.from) || 'MenuScene';
+    this.returnData = (data && data.returnData) || {};
+    this.confirmReset = false;
+  }
+
+  create() {
+    const { width, height } = CONFIG.screen;
+
+    // Своя непрозрачная подложка, а не цвет камеры: с паузы экран открывается
+    // поверх остановленного забега, и сквозь него не должно просвечивать поле
+    this.add.rectangle(0, 0, width, height, CONFIG.colors.bg).setOrigin(0).setDepth(0);
+
+    this.add.text(width / 2, 62, 'НАСТРОЙКИ',
+      textStyle(44, CONFIG.colors.text, true)).setOrigin(0.5);
+
+    this.save = SaveManager.load();
+
+    this.add.text(width / 2, 170, 'Громкость', textStyle(24, CONFIG.colors.text))
+      .setOrigin(0.5);
+
+    this.volumeText = this.add.text(width / 2, 226, this.volumeLabel(),
+      textStyle(30, CONFIG.colors.text, true)).setOrigin(0.5);
+
+    makeButton(this, width / 2 - 130, 226, '−', () => this.changeVolume(-CONFIG.audio.volumeStep),
+      { width: 64, height: 52, size: 28 });
+    makeButton(this, width / 2 + 130, 226, '+', () => this.changeVolume(CONFIG.audio.volumeStep),
+      { width: 64, height: 52, size: 28 });
+
+    this.muteButton = makeButton(this, width / 2, 320, this.muteLabel(),
+      () => this.toggleMute(), { width: 260, height: 54, size: 22 });
+
+    makeButton(this, width / 2, 420, 'НАЗАД', () => this.goBack(),
+      { width: 240, height: 54, size: 22 });
+
+    this.createResetButton(width / 2, height - 60);
+
+    this.input.keyboard.on('keydown-ESC', () => this.goBack());
+    this.input.keyboard.on('keydown-M', () => this.toggleMute());
+  }
+
+  volumeLabel() {
+    return `${Math.round(this.save.volume * 100)} %`;
+  }
+
+  muteLabel() {
+    return this.save.muted ? 'ЗВУК ВЫКЛ' : 'ЗВУК ВКЛ';
+  }
+
+  // Громкость меняется шагами и сразу слышна: без звука-образца игрок крутит
+  // число вслепую. Немой режим при этом снимается — иначе «плюс» ничего не даёт
+  changeVolume(delta) {
+    this.save.volume = Phaser.Math.Clamp(
+      +(this.save.volume + delta).toFixed(2), 0, 1);
+    if (this.save.volume > 0 && this.save.muted) {
+      this.save.muted = false;
+      this.muteButton.text.setText(this.muteLabel());
+    }
+    SaveManager.save(this.save);
+
+    this.sound.volume = this.save.volume;
+    this.sound.mute = this.save.muted;
+    this.volumeText.setText(this.volumeLabel());
+    playSfx(this, 'catch');
+  }
+
+  toggleMute() {
+    this.save.muted = toggleMuteSetting(this);
+    this.muteButton.text.setText(this.muteLabel());
+    if (!this.save.muted) playSfx(this, 'catch');
+  }
+
+  /* Возврат туда, откуда пришли. С паузы экран открыт наложением поверх
+     остановленной PauseScene, и её надо разбудить, а не стартовать заново:
+     scene.start('PauseScene') поднял бы вторую копию поверх забега */
+  goBack() {
+    if (this.from === 'PauseScene') {
+      this.scene.stop();
+      this.scene.resume('PauseScene');
+      return;
+    }
+    this.scene.start(this.from, this.returnData);
+  }
+
   // Сброс прогресса. Первое нажатие только переспрашивает, через 3 секунды
   // вопрос снимается сам: случайно снести рекорд и все апгрейды нельзя
   createResetButton(x, y) {
@@ -2277,8 +2397,12 @@ class ShopScene extends Phaser.Scene {
         return;
       }
 
-      // Немой режим — настройка, а не прогресс: он сброс переживает
-      SaveManager.save({ ...SaveManager.defaults, muted: this.save.muted });
+      // Звук — настройка, а не прогресс: громкость и немой режим сброс переживают
+      SaveManager.save({
+        ...SaveManager.defaults,
+        muted: this.save.muted,
+        volume: this.save.volume
+      });
       this.scene.restart({ from: this.from, returnData: this.returnData });
     });
   }
@@ -2306,7 +2430,7 @@ const gameConfig = {
       debug: CONFIG.debug
     }
   },
-  scene: [BootScene, MenuScene, GameScene, PauseScene, GameOverScene, ShopScene]
+  scene: [BootScene, MenuScene, GameScene, PauseScene, GameOverScene, ShopScene, SettingsScene]
 };
 
 const game = new Phaser.Game(gameConfig);
