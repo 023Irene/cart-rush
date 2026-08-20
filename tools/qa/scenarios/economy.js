@@ -13,6 +13,12 @@ const { launch, saveReport } = require('../harness');
 // Число сидов и потолок забега задаются аргументами: node economy.js метка 3 180
 const ALL_SEEDS = [101, 202, 303, 404, 505];
 const label = process.argv[2] || 'current';
+
+// Во сколько раз живой игрок богаче бота. Замер 20.08.2026: 3700 монет за забег
+// у человека против 1897 у бота. Бот сдаёт ровно по восемь коробок, не рискует
+// и не копит, поэтому систематически занижает доход — и любая цена, посчитанная
+// прямо по нему, выходит вдвое дешевле нужной. Перемерять — только плейтестом
+const BOT_TO_HUMAN = 2;
 const SEEDS = ALL_SEEDS.slice(0, Number(process.argv[3]) || ALL_SEEDS.length);
 const RUN_TIMEOUT = (Number(process.argv[4]) || 300) * 1000;
 
@@ -200,9 +206,16 @@ async function main() {
   // Магазин покупается за МОНЕТЫ, поэтому и прогрессия считается по ним
   const now = progression(main8.coins, current);
   const nowRange = progressionRange(main8.coins, current);
-  // Цель дизайна из спеки: первая покупка после первого забега, весь магазин ~к десятому
+  // Цель дизайна из спеки: первая покупка после первого забега, весь магазин ~к десятому.
+  //
+  // Цель считается для ЖИВОГО игрока, а бот приносит вдвое меньше него: плейтест
+  // 20.08.2026 дал 3700 монет за забег против 1897 у бота. Бот сдаёт ровно по восемь,
+  // не рискует и не копит. Без множителя BOT_TO_HUMAN сценарий калибровал цены по боту
+  // и предлагал их вдвое дешевле нужного — ровно так магазин и стал скупаться
+  // за 5 забегов вместо 10
   const proportionSum = proportions.flat().reduce((a, b) => a + b, 0);
-  const wantedMultiplier = Math.max(1, Math.round((main8.coins * 10) / proportionSum));
+  const wantedMultiplier = Math.max(1,
+    Math.round((main8.coins * BOT_TO_HUMAN * 10) / proportionSum));
   const proposed = proportions.map(line => line.map(v => v * wantedMultiplier));
   const after = progression(main8.coins, proposed);
   const afterRange = progressionRange(main8.coins, proposed);
@@ -243,10 +256,13 @@ async function main() {
   console.log(CURVE.measured
     ? `  кривая дохода ЗАМЕРЕНА (${CURVE.source}), а не взята из головы`
     : `  кривая дохода НЕ замерена — прогнать tools/qa/scenarios/upgrades.js base 3 150`);
-  console.log(`Цель: первая покупка после 1-го, весь магазин примерно к 10-му`);
-  console.log(`Множитель к пропорциям спеки: было 6, нужно ${summary.wantedMultiplier}`);
+  console.log(`  ЭТО ЗАБЕГИ БОТА. Живой игрок вдвое богаче: делить на ${BOT_TO_HUMAN} — ` +
+    `весь магазин примерно к ${Math.round(nowRange[0].allBoughtAfterRun / BOT_TO_HUMAN)}-му его забегу`);
+  console.log(`Цель: первая покупка после 1-го, весь магазин примерно к 10-му забегу ЖИВОГО игрока`);
+  console.log(`Множитель к пропорциям спеки: сейчас в игре 2, по замеру нужно ${summary.wantedMultiplier}`);
   console.log(`Предлагаемые цены: ${JSON.stringify(proposed)}`);
-  console.log(`С ними: первая покупка после ${after.firstBuyAfterRun}, весь магазин к ${after.allBoughtAfterRun}-му (сумма ${after.total})`);
+  console.log(`С ними: первая покупка после ${after.firstBuyAfterRun}, весь магазин к ${after.allBoughtAfterRun}-му забегу бота ` +
+    `(сумма ${after.total}) — это ${Math.round(after.allBoughtAfterRun / BOT_TO_HUMAN)}-й забег живого игрока`);
   console.log(`забегов, упёршихся в таймаут: ${main8.timedOut}`);
 
   saveReport(`economy-${label}.json`, { summary, rows, cautious });
