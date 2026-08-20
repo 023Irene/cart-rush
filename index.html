@@ -175,11 +175,56 @@ const CONFIG = {
   },
 
   // Бустер восстановления XP (GAME_SPEC.md, 5.7). Единственный бустер в MVP
+  // Бустеры (GAME_SPEC.md, 5.7; ADR-0009 открыл три из них). Все падают тем же
+  // spawnFaller(), что коробки и бомбы, и отличаются только полем kind.
+  //
+  // Правила против каши сидят здесь, а не в коде: в воздухе не больше maxInAir, и
+  // между любыми двумя спавнами не меньше minGapMs. Без них четыре независимых
+  // таймера рано или поздно совпадают, и игрок видит три бустера разом — выбор
+  // «за каким ехать» превращается в «хватай что ближе»
   booster: {
     size: 36,
-    everyMs: 25000,      // как часто падает
-    amount: 150,         // +XP, но не выше стартового максимума
-    popupDuration: 1200  // мс жизни всплывающего текста в правом верхнем углу
+    popupDuration: 1200,  // мс жизни всплывающего текста в правом верхнем углу
+    tickMs: 500,          // как часто планировщик решает, не пора ли уронить бустер
+    minGapMs: 12000,      // минимум между любыми двумя бустерами
+    maxInAir: 1,          // сколько бустеров может лететь одновременно
+
+    // afterMs — с какой секунды забега тип вообще появляется, everyMs — как часто
+    // он готов падать снова. Тайминги разведены лесенкой: игрок знакомится
+    // с бустерами по одному, а не получает четыре незнакомых значка сразу
+    types: {
+      xp: {
+        title: 'XP',
+        afterMs: 25000, everyMs: 25000,
+        amount: 150,        // +XP, но не выше стартового максимума
+        color: 0x5fbf7a
+      },
+      shield: {
+        title: 'Щит',
+        afterMs: 45000, everyMs: 40000,
+        holdMs: 12000,      // сколько щит ждёт бомбу, прежде чем истечь сам
+        color: 0x3fb6a8
+      },
+      slow: {
+        title: 'Замедление',
+        afterMs: 60000, everyMs: 45000,
+        durationMs: 6000,
+        factor: 0.5,        // множитель скорости падения, пока эффект держится
+        color: 0x8d6fd1
+      },
+      rush: {
+        title: 'Ускорение',
+        afterMs: 75000, everyMs: 50000,
+        durationMs: 6000,
+        factor: 1.35,       // множитель скорости тележки. Бустер намеренно
+                            // двойственный: разогнанной тележкой легче промахнуться
+                            // мимо коробки. А вот злее бить по грузу он не должен —
+                            // рывок нормируется по ТЕКУЩЕЙ максимальной скорости,
+                            // см. swayCargo(); иначе разворот под ускорением давал бы
+                            // k = 2.7 и силу 15.6 вместо 6.96, вдвое злее обычного
+        color: 0xe0752f
+      }
+    }
   },
 
   // Магазин улучшений (GAME_SPEC.md, 5.8). Валюта — монеты за сданный груз.
@@ -240,7 +285,9 @@ const CONFIG = {
     catchJitter: 25,       // случайный разброс в центах, чтобы удары не были клонами
     errorCooldown: 120,    // мс между звуками ошибки: взрыв выбрасывает пачку коробок сразу
     blastDetune: -700,     // взрыв бомбы — тот же error.ogg, но сильно ниже и длиннее
-    boosterDetune: 400     // подбор бустера — deliver.ogg выше обычного
+    boosterDetune: 400,    // подбор бустера — deliver.ogg выше обычного
+    shieldDetune: -200     // щит принял удар: тот же deliver.ogg, но ниже — событие
+                           // хорошее, но звучать как награда оно не должно
   },
 
   // Колонка-тень под падающим объектом: полупрозрачная полоса ровно по ширине
@@ -412,25 +459,82 @@ function makeBombTexture(scene, key, sizePx) {
   g.destroy();
 }
 
-// Бустер: зелёный квадрат с белым плюсом — «поймай, и станет лучше»
-function makeBoosterTexture(scene, key, sizePx) {
+/* Бустер: цветной квадрат с белым знаком — «поймай, и станет лучше».
+   Цвет говорит, какой именно, знак дублирует цвет: бирюзовый щит и синюю коробку
+   в движении спутать легко, а щит и шеврон — нет. Синий и жёлтый в бустерах не
+   используются вовсе: в этой игре они означают рельсу. */
+function makeBoosterTexture(scene, key, sizePx, spec) {
   const g = scene.make.graphics({ add: false });
 
-  g.fillStyle(CONFIG.colors.booster, 1);
+  g.fillStyle(spec.color, 1);
   g.fillRect(0, 0, sizePx, sizePx);
 
   g.lineStyle(2, 0x000000, 0.35);
   g.strokeRect(1, 1, sizePx - 2, sizePx - 2);
 
-  const arm = sizePx * 0.52;
-  const thick = sizePx * 0.16;
   g.fillStyle(0xffffff, 0.9);
-  g.fillRect((sizePx - arm) / 2, (sizePx - thick) / 2, arm, thick);
-  g.fillRect((sizePx - thick) / 2, (sizePx - arm) / 2, thick, arm);
+  g.lineStyle(Math.max(2, Math.round(sizePx * 0.09)), 0xffffff, 0.9);
+  BOOSTER_GLYPHS[key](g, sizePx);
 
-  g.generateTexture(key, sizePx, sizePx);
+  g.generateTexture(`booster-${key}`, sizePx, sizePx);
   g.destroy();
 }
+
+/* Знаки бустеров. Вынесены из makeBoosterTexture(), чтобы она осталась одной
+   функцией на четыре текстуры, а не выросла в лестницу из if. */
+const BOOSTER_GLYPHS = {
+  // Плюс — восстановление XP. Знак с этапа 5, игрок его уже знает
+  xp(g, size) {
+    const arm = size * 0.52;
+    const thick = size * 0.16;
+    g.fillRect((size - arm) / 2, (size - thick) / 2, arm, thick);
+    g.fillRect((size - thick) / 2, (size - arm) / 2, thick, arm);
+  },
+
+  // Щит — трапеция с остриём вниз
+  shield(g, size) {
+    const w = size * 0.46;
+    const top = size * 0.24;
+    const bottom = size * 0.78;
+    const shoulder = size * 0.58;
+    g.fillPoints([
+      { x: (size - w) / 2, y: top },
+      { x: (size + w) / 2, y: top },
+      { x: (size + w) / 2, y: shoulder },
+      { x: size / 2, y: bottom },
+      { x: (size - w) / 2, y: shoulder }
+    ], true);
+  },
+
+  // Песочные часы — замедление времени
+  slow(g, size) {
+    const w = size * 0.44;
+    const top = size * 0.26;
+    const bottom = size * 0.74;
+    const left = (size - w) / 2;
+    const right = (size + w) / 2;
+    g.fillPoints([
+      { x: left, y: top }, { x: right, y: top }, { x: size / 2, y: size / 2 }
+    ], true);
+    g.fillPoints([
+      { x: left, y: bottom }, { x: right, y: bottom }, { x: size / 2, y: size / 2 }
+    ], true);
+  },
+
+  // Двойной шеврон вправо — ускорение
+  rush(g, size) {
+    const top = size * 0.3;
+    const mid = size * 0.5;
+    const bottom = size * 0.7;
+    [size * 0.26, size * 0.5].forEach(x => {
+      g.beginPath();
+      g.moveTo(x, top);
+      g.lineTo(x + size * 0.2, mid);
+      g.lineTo(x, bottom);
+      g.strokePath();
+    });
+  }
+};
 
 // Квадратик для частиц при сдаче груза — той же природы, что и текстуры коробок
 function makeParticleTexture(scene, key, sizePx) {
@@ -579,7 +683,9 @@ class BootScene extends Phaser.Scene {
       makeBoxTexture(this, `box-${sizeName}-blue`, spec.size, CONFIG.colors.boxBlue);
     }
     makeBombTexture(this, 'bomb', CONFIG.bombs.size);
-    makeBoosterTexture(this, 'booster', CONFIG.booster.size);
+    for (const [key, spec] of Object.entries(CONFIG.booster.types)) {
+      makeBoosterTexture(this, key, CONFIG.booster.size, spec);
+    }
     makeParticleTexture(this, 'particle', 6);
 
     // Громкость и немой режим переживают перезагрузку
@@ -662,6 +768,14 @@ class GameScene extends Phaser.Scene {
     this.hintTimer = null;    // таймер затухания подсказки, перезапускается по H
     this.hintFade = null;
 
+    // Бустеры. effects — до какого времени игры действует каждый эффект;
+    // lastBoosterAt и lastTypeAt — когда бустер падал в прошлый раз, из них
+    // планировщик считает свои два правила (см. trySpawnBooster)
+    this.effects = { shield: 0, slow: 0, rush: 0 };
+    this.lastBoosterAt = -Infinity;
+    this.lastTypeAt = {};
+    Object.keys(CONFIG.booster.types).forEach(key => { this.lastTypeAt[key] = -Infinity; });
+
     // На старте страницы аудиоконтекст ещё заблокирован браузером, и выставленный
     // в BootScene mute мог не примениться. Забег начинается после нажатия клавиши,
     // то есть контекст уже разблокирован — повторяем установку здесь
@@ -697,12 +811,14 @@ class GameScene extends Phaser.Scene {
       callback: () => this.spawnNext()
     });
 
-    // Бустер восстановления XP идёт своим ровным ритмом и от темпа не зависит:
-    // иначе на разгоне он сыпался бы чаще и обесценивал бы утечку XP
+    // Бустеры идут своим ровным ритмом и от темпа не зависят: иначе на разгоне они
+    // сыпались бы чаще и обесценили бы утечку XP. Таймер один на все четыре типа —
+    // почему именно так, написано над trySpawnBooster().
+    // Имя boosterTimer менять нельзя: на него завязана оснастка (harness.js, anomaly.js)
     this.boosterTimer = this.time.addEvent({
-      delay: CONFIG.booster.everyMs,
+      delay: CONFIG.booster.tickMs,
       loop: true,
-      callback: () => this.spawnBooster()
+      callback: () => this.trySpawnBooster()
     });
 
     // Ловля: коробка становится грузом при первом касании тележки или груза
@@ -991,8 +1107,11 @@ class GameScene extends Phaser.Scene {
     this.holdDir = dir;
     if (dir !== 0) this.holdTime += delta;
 
+    // Ускорение множит и базовую, и максимальную скорость: пропорция сохраняется,
+    // а значит рывок по грузу считается ровно так же — см. maxCartSpeed()
+    const boost = this.cartSpeedScale();
     const speed = Phaser.Math.Linear(
-      c.speedBase, c.speedMax, Math.min(1, this.holdTime / c.accelTime));
+      c.speedBase, c.speedMax, Math.min(1, this.holdTime / c.accelTime)) * boost;
 
     // Упор в края экрана
     const half = (c.width * this.cart.scale) / 2;
@@ -1011,6 +1130,21 @@ class GameScene extends Phaser.Scene {
 
     const nextX = Phaser.Math.Clamp(this.cart.x + vx * delta / 1000, minX, maxX);
     this.moveCartBy(nextX - this.cart.x, 0);
+  }
+
+  // Множитель скорости тележки от бустера ускорения
+  cartSpeedScale() {
+    const rush = CONFIG.booster.types.rush;
+    return this.hasEffect('rush') ? rush.factor : 1;
+  }
+
+  /* Максимальная скорость тележки ПРЯМО СЕЙЧАС — мерка для силы рывка.
+     Нормировать по константе CONFIG.cart.speedMax нельзя: под ускорением разворот
+     давал бы k = 2.7 вместо 2, а кривая swayPower = 2.8 превращает это в силу 15.6
+     против 6.96 — вдвое злее обычного разворота. Бустер задуман двойственным
+     (разогнанной тележкой легче промахнуться мимо коробки), а не самоубийственным. */
+  maxCartSpeed() {
+    return CONFIG.cart.speedMax * this.cartSpeedScale();
   }
 
   // Груз кренится в сторону, обратную рывку: высокий штабель может развалиться.
@@ -1037,7 +1171,7 @@ class GameScene extends Phaser.Scene {
   swayCargo(dvx) {
     if (this.cargo.length === 0) { this.swayDebt = 0; return; }
     const c = CONFIG.cart;
-    const k = Math.abs(dvx) / c.speedMax;   // 1 — старт или стоп, 2 — разворот
+    const k = Math.abs(dvx) / this.maxCartSpeed();   // 1 — старт или стоп, 2 — разворот
 
     // Разовый рывок перебивает накопленное: после старта, стопа или разворота
     // штабель уже качнуло сильнее, чем на всё, что успело скопиться
@@ -1052,7 +1186,7 @@ class GameScene extends Phaser.Scene {
     if (this.swayDebt * dvx < 0) this.swayDebt = 0;
     this.swayDebt += dvx;
 
-    const debtK = Math.abs(this.swayDebt) / c.speedMax;
+    const debtK = Math.abs(this.swayDebt) / this.maxCartSpeed();
     if (debtK < c.swayAccelK) return;
 
     const dir = -Math.sign(this.swayDebt);
@@ -1240,7 +1374,7 @@ class GameScene extends Phaser.Scene {
     // В полёте гравитации нет: скорость держится ровно такой, как в спеке,
     // и переназначается каждый кадр (иначе frictionAir погасит её на лету)
     obj.setIgnoreGravity(true);
-    obj.setVelocity(0, this.run.fallSpeed / 60);
+    obj.setVelocity(0, this.currentFallSpeed() / 60);
 
     this.fallingBoxes.push(obj);
     return obj;
@@ -1272,9 +1406,42 @@ class GameScene extends Phaser.Scene {
     this.spawnFaller('bomb', CONFIG.bombs.size, this.randomRail(), { kind: 'bomb' });
   }
 
-  spawnBooster() {
+  /* Планировщик бустеров. Один тик на все четыре типа, а не четыре независимых
+     таймера: оба правила против каши — «не больше maxInAir в воздухе» и «не меньше
+     minGapMs между любыми двумя» — общие, и согласовывать их между независимыми
+     таймерами пришлось бы теми же полями, только размазанными по четырём колбэкам. */
+  trySpawnBooster() {
     if (this.over) return;
-    this.spawnFaller('booster', CONFIG.booster.size, this.randomRail(), { kind: 'booster' });
+
+    const c = CONFIG.booster;
+    const now = this.run.elapsed;
+
+    // Правило 1: в воздухе не больше maxInAir
+    const inAir = this.fallingBoxes.filter(o => o.boxData.kind === 'booster').length;
+    if (inAir >= c.maxInAir) return;
+
+    // Правило 2: пауза между любыми двумя бустерами
+    if (now - this.lastBoosterAt < c.minGapMs) return;
+
+    // Готовые типы: наступила их секунда и прошёл их период
+    const ready = Object.entries(c.types).filter(([key, spec]) =>
+      now >= spec.afterMs && now - this.lastTypeAt[key] >= spec.everyMs);
+    if (ready.length === 0) return;
+
+    // Из готовых берём тот, что ждёт дольше всех. Случайный выбор дал бы редким
+    // типам проигрывать частым бесконечно: щит с периодом 40 с почти всегда
+    // конкурировал бы с XP, у которого период 25 с
+    const [key] = ready.reduce((best, item) =>
+      this.lastTypeAt[item[0]] < this.lastTypeAt[best[0]] ? item : best);
+
+    this.lastBoosterAt = now;
+    this.lastTypeAt[key] = now;
+    this.spawnBooster(key);
+  }
+
+  spawnBooster(key) {
+    this.spawnFaller(`booster-${key}`, CONFIG.booster.size, this.randomRail(),
+      { kind: 'booster', booster: key });
   }
 
   // Выбор размера по весам из CONFIG
@@ -1345,6 +1512,17 @@ class GameScene extends Phaser.Scene {
 
     this.consumeFaller(bomb, 'exploded');
 
+    // Щит гасит бомбу ЦЕЛИКОМ — и штраф, и разлёт штабеля. Половинчатый вариант
+    // (гасить только XP) почти ничего бы не стоил: прямой штраф бомбы это 20 %
+    // расхода XP за забег, а выброшенный ею груз — куда больше
+    if (this.hasEffect('shield')) {
+      this.effects.shield = 0;
+      playSfx(this, 'deliver', { detune: CONFIG.audio.shieldDetune });
+      this.burstParticles(b.blastParticles, CONFIG.booster.types.shield.color, x, y);
+      this.showBoosterPopup('Щит принял удар', CONFIG.booster.types.shield.color);
+      return;
+    }
+
     this.blastCargo(x, y);
 
     // Взрыв — тот же error.ogg, но сильно ниже и оттого длиннее и глуше.
@@ -1357,18 +1535,43 @@ class GameScene extends Phaser.Scene {
     this.spendXp(b.penalty);
   }
 
-  // Бустер: +150 XP, но не выше стартового максимума. Показываем то, что реально
-  // добавилось: на почти полном запасе это меньше номинала
-  collectBooster(booster) {
-    this.consumeFaller(booster, 'collected');
+  // Подбор бустера. Что именно он делает, решает поле booster; общее здесь —
+  // объект съедается, играет звук и всплывает подпись в правом верхнем углу
+  collectBooster(obj) {
+    const key = obj.boxData.booster;
+    const spec = CONFIG.booster.types[key];
+    this.consumeFaller(obj, 'collected');
 
-    const before = this.run.xp;
-    this.run.xp = Math.min(this.run.maxXp, this.run.xp + CONFIG.booster.amount);
-
-    // На полном запасе бустер не даёт ничего, и «+0 XP» выглядело бы как баг
-    const gained = this.run.xp - before;
     playSfx(this, 'deliver', { detune: CONFIG.audio.boosterDetune });
-    this.showBoosterPopup(gained > 0 ? `+${gained} XP` : 'XP полон');
+    this.showBoosterPopup(this.applyBooster(key, spec), spec.color);
+  }
+
+  // Возвращает подпись для всплывашки: у каждого бустера она своя, потому что
+  // сказать надо разное — сколько XP добавилось, сколько секунд действует эффект
+  applyBooster(key, spec) {
+    if (key === 'xp') {
+      const before = this.run.xp;
+      this.run.xp = Math.min(this.run.maxXp, this.run.xp + spec.amount);
+      const gained = this.run.xp - before;
+      // На полном запасе бустер не даёт ничего, и «+0 XP» выглядело бы как баг
+      return gained > 0 ? `+${gained} XP` : 'XP полон';
+    }
+
+    if (key === 'shield') {
+      // Щит не копится: второй подобранный продлевает срок, а не даёт два заряда.
+      // Иначе игрок накапливал бы их и переставал бояться бомб вовсе
+      this.effects.shield = this.run.elapsed + spec.holdMs;
+      return 'Щит';
+    }
+
+    this.effects[key] = this.run.elapsed + spec.durationMs;
+    return `${spec.title} ${spec.durationMs / 1000} с`;
+  }
+
+  // Активен ли эффект прямо сейчас. Время игровое (run.elapsed), а не this.time.now:
+  // на паузе забег стоит, и эффект не должен утекать, пока игрок смотрит меню
+  hasEffect(key) {
+    return this.run.elapsed < this.effects[key];
   }
 
   // Секций и «чужого цвета» больше нет: коробка своей рельсы всегда принимается
@@ -1577,10 +1780,10 @@ class GameScene extends Phaser.Scene {
 
   // Бустер отчитывается в правом верхнем углу (GAME_SPEC.md, раздел 11):
   // над тележкой ему тесно, там уже стоит цена сдачи
-  showBoosterPopup(text) {
+  showBoosterPopup(text, color) {
     const label = this.add.text(
       CONFIG.screen.width - 20, 20, text,
-      textStyle(22, hex(CONFIG.colors.booster), true)).setOrigin(1, 0).setDepth(20);
+      textStyle(22, hex(color || CONFIG.colors.booster), true)).setOrigin(1, 0).setDepth(20);
 
     this.tweens.add({
       targets: label,
@@ -1660,8 +1863,16 @@ class GameScene extends Phaser.Scene {
   // Держит скорость падения ровно такой, как в CONFIG: сопротивление воздуха
   // иначе тормозит коробки в полёте
   holdFallSpeed() {
-    const v = this.run.fallSpeed / 60;
+    const v = this.currentFallSpeed() / 60;
     this.fallingBoxes.forEach(box => box.setVelocity(0, v));
+  }
+
+  // Скорость падения с учётом замедления. run.fallSpeed трогать нельзя: он растёт
+  // ступенями от времени забега, и умножение на месте сделало бы замедление
+  // постоянным — эффект кончился бы, а темп остался бы срезанным
+  currentFallSpeed() {
+    const slow = CONFIG.booster.types.slow;
+    return this.run.fallSpeed * (this.hasEffect('slow') ? slow.factor : 1);
   }
 
   // Коробка, улетевшая ниже СВОЕЙ рельсы, — промах.
@@ -1729,6 +1940,16 @@ class GameScene extends Phaser.Scene {
     // с тележкой и перекрывала коробки, из-за чего её и убрали
     this.cargoText = this.add.text(16, 40, '',
       textStyle(15, CONFIG.colors.textDim)).setDepth(20);
+
+    // Активные эффекты — правый верх, под всплывашкой подбора. Без обратного отсчёта
+    // бустеры нечем оценивать: игрок не понимает, кончилось замедление или ещё нет
+    this.effectTexts = {};
+    ['shield', 'slow', 'rush'].forEach((key, i) => {
+      this.effectTexts[key] = this.add.text(
+        CONFIG.screen.width - 20, 56 + i * 22, '',
+        textStyle(16, hex(CONFIG.booster.types[key].color), true))
+        .setOrigin(1, 0).setDepth(20);
+    });
 
     this.createHint();
   }
@@ -1800,12 +2021,27 @@ class GameScene extends Phaser.Scene {
     this.xpText.setText(`${this.run.xp} / ${this.run.maxXp} XP`);
     this.scoreText.setText(String(this.run.score));
 
+    this.updateEffectHud();
+
     // Пустой кузов — пустая строка: висящее «Груз: 0 шт» только шумит.
     // Цена берётся из cargoValue(), той же функции, что начисляет очки в unloadCargo():
     // обещанная цифра не имеет права разойтись с выданной
     this.cargoText.setText(this.cargo.length === 0
       ? ''
       : `Груз: ${this.cargo.length} шт → сдать за ${this.cargoValue()}`);
+  }
+
+  // Строка на эффект: «Щит», «Замедление 4 с». У щита срока нет — он висит до бомбы
+  // или до конца holdMs, и обратный отсчёт там сбивал бы с толку: важно не сколько
+  // осталось, а есть он или нет
+  updateEffectHud() {
+    const left = key => Math.ceil((this.effects[key] - this.run.elapsed) / 1000);
+
+    Object.entries(this.effectTexts).forEach(([key, label]) => {
+      if (!this.hasEffect(key)) return label.setText('');
+      const spec = CONFIG.booster.types[key];
+      label.setText(key === 'shield' ? spec.title : `${spec.title} ${left(key)} с`);
+    });
   }
 
   pauseGame() {
