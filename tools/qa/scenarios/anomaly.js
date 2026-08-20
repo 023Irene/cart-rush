@@ -27,7 +27,7 @@ async function runSeed(seed) {
       const sc = window.__qa.scene();
       return {
         spawnPaused: sc.spawnTimer.paused,
-        boosterPaused: sc.boosterTimer.paused,
+        pickupPaused: sc.pickupTimer.paused,
         lastRamp: Math.round(sc.run.lastRamp),
         interval: Math.round(sc.run.spawnInterval)
       };

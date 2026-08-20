@@ -203,7 +203,7 @@ function initScript({ seed, save }) {
     pauseSpawn(flag) {
       const s = this.scene();
       s.spawnTimer.paused = flag;
-      s.boosterTimer.paused = flag;
+      s.pickupTimer.paused = flag;
       return flag;
     },
 
