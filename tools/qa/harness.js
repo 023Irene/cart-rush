@@ -4,17 +4,37 @@
    Зачем: физику штабеля и экономику нельзя оценить чтением кода, а живого
    тестировщика у проекта нет. Harness прогоняет игру и снимает числа.
 
-   Граница (ADR-0004): harness НЕ меняет игру. Всё, что ему нужно, он берёт
-   из уже существующих `game`, `CONFIG` и методов сцены. В index.html нет и
-   не должно появиться ни одной строки ради тестов.
+   Граница (ADR-0004, уточнена ADR-0011): harness НЕ меняет игру. Всё, что ему
+   нужно, он берёт из уже существующих `CONFIG` и методов сцены, а сам замерочный
+   API (`window.__qa`) вставляет в страницу снаружи. Единственное, что игра даёт
+   ему навстречу, — ручка `window.game` в src/main.js: под ES-модулями экземпляр
+   лежит в модульной области, и достать его иначе нечем.
+
+   Оснастка гоняет СОБРАННУЮ игру из dist/ и собирает её сама (один раз на процесс).
+   Замер по вчерашней сборке дал бы красивые неверные числа — а числа тут
+   доказательная база.
    ========================================================================= */
 
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 const puppeteer = require('puppeteer-core');
 
-const ROOT = path.resolve(__dirname, '..', '..');
+const PROJECT = path.resolve(__dirname, '..', '..');
+const ROOT = path.join(PROJECT, 'dist');
+
+// Собираем один раз на процесс: сценарий поднимает игру десятки раз, а исходники
+// за прогон не меняются. QA_SKIP_BUILD=1 — на случай отладки самой оснастки
+let built = false;
+function buildOnce() {
+  if (built || process.env.QA_SKIP_BUILD === '1') return;
+  const viteBin = path.join(PROJECT, 'node_modules', 'vite', 'bin', 'vite.js');
+  execFileSync(process.execPath, [viteBin, 'build'], {
+    cwd: PROJECT, stdio: 'ignore'
+  });
+  built = true;
+}
 
 // Chrome берём системный — puppeteer-core свой браузер не качает
 const CHROME_CANDIDATES = [
@@ -95,22 +115,10 @@ function initScript({ seed, save }) {
     else localStorage.removeItem('cartRushSave');
   } catch (e) { /* приватный режим — играем без сохранений */ }
 
-  let stored;
-  Object.defineProperty(window, 'Phaser', {
-    configurable: true,
-    get: () => stored,
-    set: value => {
-      stored = value;
-      const Original = value.Game;
-      function Patched(config) {
-        const instance = new Original(config);
-        window.__game = instance;
-        return instance;
-      }
-      Patched.prototype = Original.prototype;
-      value.Game = Patched;
-    }
-  });
+  // Экземпляр игры берём из ручки window.game (ADR-0011). Раньше здесь стоял
+  // перехват присваивания window.Phaser с подменой конструктора Game — под
+  // ES-модулями window.Phaser не присваивается вовсе, перехватывать нечего.
+  // window.__game проставляется в launch() сразу после загрузки страницы
 
   // Всё, что дёргают сценарии. Живёт в странице, чтобы не гонять коробки
   // по одной через CDP: снимок штабеля — одна команда, а не двадцать
@@ -644,6 +652,7 @@ const CONFIG_SWITCH_MS = 260;   // switchDuration 150 мс плюс запас �
 
 async function launch(options = {}) {
   const { seed = null, save = null, headless = true, page: pageUrl = 'index.html' } = options;
+  buildOnce();
   const { server, port } = await startServer();
 
   const browser = await puppeteer.launch({
@@ -661,7 +670,9 @@ async function launch(options = {}) {
 
   await page.evaluateOnNewDocument(initScript, { seed, save });
   await page.goto(`http://127.0.0.1:${port}/${pageUrl}`, { waitUntil: 'networkidle2' });
-  await page.waitForFunction(() => !!window.__game, { timeout: 10000 });
+  await page.waitForFunction(() => !!window.game, { timeout: 10000 });
+  // Внутренние методы window.__qa обращаются к __game — даём им прежнее имя
+  await page.evaluate(() => { window.__game = window.game; });
   await harness.wait(1200);   // BootScene генерит текстуры и уходит в меню
 
   return harness;

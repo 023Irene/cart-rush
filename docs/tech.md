@@ -5,18 +5,21 @@
 
 ## Запуск
 
-**Опубликованная версия:** https://023irene.github.io/cart-rush/ — раздаётся GitHub Pages из
-ветки `main`, обновляется автоматически при каждом push.
+**Опубликованная версия:** https://023irene.github.io/cart-rush/ — собирается workflow
+`.github/workflows/pages.yml` при каждом push в `main` и выкладывается из `dist/`.
+В настройках репозитория Pages → Source должен стоять «GitHub Actions».
 
 **Локально:**
 
 ```
-VS Code → правый клик по index.html → Open with Live Server
+npm install     # один раз
+npm run dev     # http://localhost:5173
+npm run build && npm run preview   # проверить собранное
 ```
 
-Двойной клик по файлу **не работает**: на протоколе `file://` браузер блокирует загрузку аудио
-по CORS — игра откроется молча и напишет об этом в консоль. Если расширения Live Server нет —
-установить `ritwickdey.LiveServer` из Marketplace.
+Открыть `index.html` файлом больше нельзя: там оболочка, код грузится модулями. Заодно ушла
+старая ловушка — на `file://` браузер блокировал аудио по CORS, игра открывалась молча, и
+плейтест звука не закрывался с этапа 4.
 
 Любое воспроизведение звука идёт через `playSfx(scene, key, config)`, а не через
 `scene.sound.play`: у Phaser `sound.play` с отсутствующим в кэше ключом **бросает исключение**,
@@ -27,23 +30,39 @@ VS Code → правый клик по index.html → Open with Live Server
 
 | Что | Версия | Откуда |
 |---|---|---|
-| Phaser | 4.2.1 | `https://cdn.jsdelivr.net/npm/phaser@4.2.1/dist/phaser.min.js` |
+| Phaser | 4.2.1 | npm, `dependencies` |
+| Vite | 8.x | npm, `devDependencies` — сборка (ADR-0011) |
+| puppeteer-core | 24.x | npm, `devDependencies` — только QA-оснастка (ADR-0004) |
 
-Версия закреплена точным номером намеренно: ссылка вида `@4` подтянет мажорное обновление и
-сломает проект молча. Других зависимостей нет и без нового ADR не будет.
+Версия Phaser закреплена точным номером намеренно: запись вида `^4` подтянет мажорное
+обновление и сломает проект молча. Третьей зависимости у игры нет и без нового ADR не будет —
+плагины Vite считаются тоже.
 
-## Устройство index.html
+## Устройство кода
 
-Порядок секций в файле:
+`index.html` — оболочка на 35 строк: `<style>`, `<div id="game">` и
+`<script type="module" src="/src/main.js">`. Центрированием занимается только Phaser
+(`CENTER_BOTH`): флекс на `body` давал второе центрирование поверх первого и уводил канвас
+за край экрана.
 
-1. `<style>` — сброс полей, фон страницы, обёртка `#game` во всё окно.
-   Центрированием занимается только Phaser (`CENTER_BOTH`): флекс на `body` давал второе
-   центрирование поверх первого и уводил канвас за край экрана.
-2. `CONFIG` — **все** игровые числа: размеры, скорости, штрафы, ценности, параметры физики.
-   Баланс крутится только здесь, логику для этого трогать не нужно.
-3. `SaveManager` — чтение и запись `localStorage`, ключ `cartRushSave`.
-4. Сцены: `BootScene` → `MenuScene` → `GameScene` → `PauseScene` → `GameOverScene`.
-5. `new Phaser.Game(...)` — запуск.
+| Модуль | Что внутри |
+|---|---|
+| `src/config.js` | `CONFIG` — **все** игровые числа; `CAT` и маски столкновений; `fitScreenToWindow()` |
+| `src/save.js` | `SaveManager` — `localStorage`, ключ `cartRushSave` |
+| `src/textures.js` | генерация текстур примитивами: коробки, бомба, предметы, частица |
+| `src/ui.js` | `hex`, `textStyle`, `makeButton`, `drawKeyHints` |
+| `src/audio.js` | `playSfx`, `toggleMuteSetting` |
+| `src/scenes/` | Boot → Menu → Game → Pause → GameOver → Shop → Settings |
+| `src/main.js` | конфиг Phaser, `new Phaser.Game(...)`, ручки `window.game` и `window.CONFIG` |
+
+`GameScene` — самый большой модуль (~1350 строк). Разбирать его на подсистемы этап 9
+намеренно не стал: смешивать смену сборки с рефакторингом главной сцены значит потерять
+возможность понять, что именно сломалось (ADR-0011).
+
+**Ручки `window.game` и `window.CONFIG`** в `main.js` — не украшение. До Vite верхнеуровневый
+`const` обычного `<script>` попадал в глобальную лексическую область, и QA-оснастка видела
+`CONFIG` сама собой, а экземпляр игры доставала перехватом `window.Phaser`. У модуля своя
+область: обе ручки приходится давать явно.
 
 ## Физика
 

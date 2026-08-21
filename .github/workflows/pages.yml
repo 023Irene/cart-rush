@@ -1,0 +1,55 @@
+# Публикация на GitHub Pages (ADR-0011).
+# До переезда на Vite Pages отдавали репозиторий как есть; теперь отдают собранный
+# dist/, а он в .gitignore и в репозитории не лежит — значит собирать надо здесь.
+#
+# ВАЖНО: в настройках репозитория Pages → Source должен стоять «GitHub Actions».
+# Со старым «Deploy from a branch» этот workflow отработает, а сайт не обновится.
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:   # кнопка «запустить вручную» на вкладке Actions
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Параллельные деплои не нужны: важен последний. Идущий не отменяем, чтобы
+# не оборвать выкладку на середине
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      # ci, а не install: ставит ровно то, что записано в package-lock.json
+      - run: npm ci
+
+      - run: npm run build
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
